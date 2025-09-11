@@ -343,4 +343,12 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from "./database-storage";
+import { seedDatabase } from "./seed";
+
+export const storage = new DatabaseStorage();
+
+// Initialize database with seed data
+if (process.env.NODE_ENV === "development") {
+  seedDatabase().catch(console.error);
+}
