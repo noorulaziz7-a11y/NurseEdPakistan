@@ -6,8 +6,13 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
   examProgress: jsonb("exam_progress").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastLoginAt: timestamp("last_login_at"),
 });
 
 export const examQuestions = pgTable("exam_questions", {
@@ -76,9 +81,19 @@ export const practiceTests = pgTable("practice_tests", {
   score: integer("score"), // percentage
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  lastLoginAt: true,
+  examProgress: true,
+}).extend({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+export const loginUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
 });
 
 export const insertExamQuestionSchema = createInsertSchema(examQuestions).omit({
@@ -106,6 +121,7 @@ export const insertPracticeTestSchema = createInsertSchema(practiceTests).omit({
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type LoginUser = z.infer<typeof loginUserSchema>;
 export type ExamQuestion = typeof examQuestions.$inferSelect;
 export type InsertExamQuestion = z.infer<typeof insertExamQuestionSchema>;
 export type College = typeof colleges.$inferSelect;

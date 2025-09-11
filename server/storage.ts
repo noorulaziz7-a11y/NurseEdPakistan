@@ -5,7 +5,9 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserLastLogin(userId: string): Promise<void>;
 
   // Exam Questions
   getExamQuestions(examType: string, limit?: number): Promise<ExamQuestion[]>;
@@ -200,11 +202,29 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(user => user.username === username);
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.email === email);
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id, examProgress: {} };
+    const user: User = { 
+      ...insertUser, 
+      id, 
+      examProgress: {},
+      createdAt: new Date(),
+      lastLoginAt: null
+    };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUserLastLogin(userId: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.lastLoginAt = new Date();
+      this.users.set(userId, user);
+    }
   }
 
   // Exam Question methods
