@@ -5,9 +5,9 @@ import NewsCard from "@/components/cards/news-card";
 import type { NewsArticle } from "@shared/schema";
 
 export default function News() {
-  const { data: featuredArticle, isLoading: featuredLoading } = useQuery<NewsArticle>({
+  const { data: featuredArticles, isLoading: featuredLoading } = useQuery<NewsArticle[]>({
     queryKey: ["/api/news", { featured: true, limit: 1 }],
-    select: (data: NewsArticle[]) => data[0], // Get the first featured article
+    // Get the first featured article
   });
 
   const { data: recentArticles, isLoading: recentLoading } = useQuery<NewsArticle[]>({
@@ -52,8 +52,8 @@ export default function News() {
                   </div>
                 </div>
               </Card>
-            ) : featuredArticle ? (
-              <NewsCard article={featuredArticle} featured={true} />
+            ) : featuredArticles && featuredArticles.length > 0 ? (
+              <NewsCard article={featuredArticles[0]} featured={true} />
             ) : (
               <Card className="p-8">
                 <CardContent className="text-center">

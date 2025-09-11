@@ -13,9 +13,9 @@ import { useState } from "react";
 export default function Home() {
   const [selectedAnswer, setSelectedAnswer] = useState("");
 
-  const { data: sampleQuestion, isLoading } = useQuery<ExamQuestion>({
+  const { data: questions, isLoading } = useQuery<ExamQuestion[]>({
     queryKey: ["/api/exam-questions/NCLEX-RN"],
-    select: (data: ExamQuestion[]) => data[0], // Get first question for demo
+    // Get first question for demo
   });
 
   return (
@@ -65,15 +65,15 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
-                ) : sampleQuestion ? (
+                ) : questions && questions.length > 0 ? (
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-card-foreground mb-4" data-testid="text-demo-question">
-                      {sampleQuestion.question}
+                      {questions[0].question}
                     </h3>
                     
                     {/* Multiple Choice Options */}
                     <RadioGroup value={selectedAnswer} onValueChange={setSelectedAnswer} className="space-y-3" data-testid="radio-group-demo-answers">
-                      {(sampleQuestion.options as string[]).map((option, index) => {
+                      {(questions[0].options as string[]).map((option, index) => {
                         const label = String.fromCharCode(65 + index); // A, B, C, D
                         return (
                           <div key={index} className="flex items-start space-x-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors">

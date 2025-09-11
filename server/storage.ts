@@ -231,8 +231,8 @@ export class MemStorage implements IStorage {
     if (filters?.city && filters.city !== "All Cities") {
       colleges = colleges.filter(c => c.city === filters.city);
     }
-    if (filters?.type && filters.type !== "All Programs") {
-      colleges = colleges.filter(c => (c.programs as string[]).includes(filters.type));
+    if (filters?.programs && filters.programs !== "All Programs") {
+      colleges = colleges.filter(c => (c.programs as string[]).includes(filters.programs));
     }
     
     return colleges;
@@ -244,7 +244,16 @@ export class MemStorage implements IStorage {
 
   async createCollege(insertCollege: InsertCollege): Promise<College> {
     const id = randomUUID();
-    const college: College = { ...insertCollege, id };
+    const college: College = { 
+      ...insertCollege, 
+      id, 
+      description: insertCollege.description || null,
+      admissionFee: insertCollege.admissionFee || null,
+      rating: insertCollege.rating || null,
+      reviewCount: insertCollege.reviewCount || null,
+      contact: insertCollege.contact || null,
+      accreditation: insertCollege.accreditation || null
+    };
     this.colleges.set(id, college);
     return college;
   }
@@ -264,7 +273,17 @@ export class MemStorage implements IStorage {
 
   async createStudyMaterial(insertMaterial: InsertStudyMaterial): Promise<StudyMaterial> {
     const id = randomUUID();
-    const material: StudyMaterial = { ...insertMaterial, id, updatedAt: new Date() };
+    const material: StudyMaterial = { 
+      ...insertMaterial, 
+      id, 
+      updatedAt: new Date(),
+      description: insertMaterial.description || null,
+      duration: insertMaterial.duration || null,
+      rating: insertMaterial.rating || null,
+      isPremium: insertMaterial.isPremium || false,
+      fileUrl: insertMaterial.fileUrl || null,
+      pageCount: insertMaterial.pageCount || null
+    };
     this.studyMaterials.set(id, material);
     return material;
   }
@@ -288,7 +307,15 @@ export class MemStorage implements IStorage {
 
   async createNewsArticle(insertArticle: InsertNewsArticle): Promise<NewsArticle> {
     const id = randomUUID();
-    const article: NewsArticle = { ...insertArticle, id, publishedAt: new Date() };
+    const article: NewsArticle = { 
+      ...insertArticle, 
+      id, 
+      publishedAt: new Date(),
+      excerpt: insertArticle.excerpt || null,
+      authorTitle: insertArticle.authorTitle || null,
+      imageUrl: insertArticle.imageUrl || null,
+      featured: insertArticle.featured || false
+    };
     this.newsArticles.set(id, article);
     return article;
   }
@@ -300,7 +327,17 @@ export class MemStorage implements IStorage {
 
   async createPracticeTest(insertTest: InsertPracticeTest): Promise<PracticeTest> {
     const id = randomUUID();
-    const test: PracticeTest = { ...insertTest, id, completedAt: new Date() };
+    const test: PracticeTest = { 
+      ...insertTest, 
+      id, 
+      completedAt: new Date(),
+      userId: insertTest.userId || null,
+      questionsAnswered: insertTest.questionsAnswered || null,
+      correctAnswers: insertTest.correctAnswers || null,
+      totalQuestions: insertTest.totalQuestions || null,
+      timeSpent: insertTest.timeSpent || null,
+      score: insertTest.score || null
+    };
     this.practiceTests.set(id, test);
     return test;
   }
