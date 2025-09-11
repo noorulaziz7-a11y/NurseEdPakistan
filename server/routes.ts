@@ -1,9 +1,88 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertExamQuestionSchema, insertCollegeSchema, insertStudyMaterialSchema, insertNewsArticleSchema, insertPracticeTestSchema } from "@shared/schema";
+import { insertExamQuestionSchema, insertCollegeSchema, insertStudyMaterialSchema, insertNewsArticleSchema, insertPracticeTestSchema, insertUserSchema, loginUserSchema } from "@shared/schema";
+import { AuthService } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/auth/register", async (req, res, next) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await AuthService.register(userData);
+      
+      // Regenerate session for security and set user ID
+      req.session.regenerate((err) => {
+        if (err) return next(err);
+        req.session.userId = user.id;
+        req.session.save((err) => {
+          if (err) return next(err);
+          res.status(201).json({ user, message: "Registration successful" });
+        });
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: "Registration failed" });
+      }
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res, next) => {
+    try {
+      const loginData = loginUserSchema.parse(req.body);
+      const user = await AuthService.login(loginData);
+      
+      // Regenerate session for security and set user ID
+      req.session.regenerate((err) => {
+        if (err) return next(err);
+        req.session.userId = user.id;
+        req.session.save((err) => {
+          if (err) return next(err);
+          res.json({ user, message: "Login successful" });
+        });
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(401).json({ message: error.message });
+      } else {
+        res.status(401).json({ message: "Login failed" });
+      }
+    }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      req.session.destroy((err) => {
+        if (err) {
+          return res.status(500).json({ message: "Logout failed" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logout successful" });
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      if (!req.session?.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const user = await AuthService.getCurrentUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      res.json({ user });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user" });
+    }
+  });
+
   // Exam questions routes
   app.get("/api/exam-questions/:examType", async (req, res) => {
     try {
