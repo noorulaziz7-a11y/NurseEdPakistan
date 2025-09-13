@@ -247,25 +247,24 @@ export default function PracticeTest() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-card border-b border-border py-4">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="ios-nav-blur border-b border-border/20 py-6 sticky top-0 z-10">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Badge className={config.badgeColor} data-testid="badge-exam-type">
+            <div className="flex items-center space-x-6">
+              <Badge className={`${config.badgeColor} px-4 py-2 rounded-2xl ios-subtitle`} data-testid="badge-exam-type">
                 {config.name}
               </Badge>
-              <span className="text-sm text-muted-foreground" data-testid="text-question-progress">
+              <span className="text-sm text-muted-foreground ios-body" data-testid="text-question-progress">
                 Question {currentQuestionIndex + 1} of {questions.length}
               </span>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-muted-foreground flex items-center">
-                <Clock className="mr-1 w-4 h-4" />
+            <div className="flex items-center space-x-6">
+              <div className="text-sm text-muted-foreground flex items-center ios-body bg-muted/40 px-4 py-2 rounded-2xl">
+                <Clock className="mr-2 w-4 h-4" />
                 <span data-testid="text-time-remaining">{formatTime(timeRemaining)}</span>
               </div>
               <Button 
-                variant="outline" 
-                size="sm"
+                className="ios-button-primary px-6 py-3"
                 onClick={handleSubmitTest}
                 data-testid="button-submit-test"
               >
@@ -273,18 +272,18 @@ export default function PracticeTest() {
               </Button>
             </div>
           </div>
-          <div className="mt-4">
-            <Progress value={progress} className="h-2" data-testid="progress-test" />
+          <div className="mt-6">
+            <Progress value={progress} className="h-3 bg-muted/40 rounded-full" data-testid="progress-test" />
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-4xl">
-        <Card className="p-8">
+      <div className="container mx-auto px-6 sm:px-8 lg:px-10 py-12 max-w-5xl">
+        <Card className="ios-card p-10 md:p-12 ios-slide-up">
           <CardContent className="p-0">
             {/* Question */}
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-card-foreground mb-6" data-testid="text-question">
+            <div className="mb-10">
+              <h2 className="text-2xl md:text-3xl ios-title text-card-foreground mb-8 leading-relaxed" data-testid="text-question">
                 {currentQuestion.question}
               </h2>
               
@@ -297,12 +296,17 @@ export default function PracticeTest() {
               >
                 {(currentQuestion.options as string[]).map((option, index) => {
                   const label = String.fromCharCode(65 + index); // A, B, C, D
+                  const isSelected = selectedAnswers[currentQuestionIndex] === option;
                   return (
-                    <div key={index} className="flex items-start space-x-3 p-4 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors">
-                      <RadioGroupItem value={option} id={`option-${index}`} className="mt-1" />
-                      <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer" data-testid={`label-option-${index}`}>
-                        <span className="font-medium text-card-foreground">{label}.</span>
-                        <span className="text-card-foreground ml-2">{option}</span>
+                    <div key={index} className={`flex items-start space-x-4 p-6 rounded-2xl border transition-all duration-200 cursor-pointer ios-scale-in ${
+                      isSelected 
+                        ? 'border-primary/30 bg-primary/5 shadow-sm' 
+                        : 'border-border/50 hover:border-border hover:bg-muted/30 hover:shadow-sm'
+                    }`}>
+                      <RadioGroupItem value={option} id={`option-${index}`} className="mt-1.5 w-5 h-5" />
+                      <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer ios-body" data-testid={`label-option-${index}`}>
+                        <span className="ios-subtitle text-primary text-lg">{label}.</span>
+                        <span className="text-card-foreground ml-3 text-lg leading-relaxed">{option}</span>
                       </Label>
                     </div>
                   );
@@ -311,11 +315,13 @@ export default function PracticeTest() {
             </div>
             
             {/* Navigation */}
-            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-6 sm:space-y-0">
               <Button 
                 variant="ghost" 
                 onClick={toggleBookmark}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className={`ios-button-secondary text-muted-foreground hover:text-foreground transition-all duration-200 px-6 py-3 ${
+                  bookmarkedQuestions.has(currentQuestionIndex) ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : ''
+                }`}
                 data-testid="button-bookmark"
               >
                 <Bookmark className={`mr-2 w-4 h-4 ${bookmarkedQuestions.has(currentQuestionIndex) ? 'fill-current' : ''}`} />
@@ -324,7 +330,7 @@ export default function PracticeTest() {
               
               <div className="flex space-x-4">
                 <Button 
-                  variant="outline" 
+                  className="ios-button-secondary px-8 py-3"
                   onClick={handlePrevious}
                   disabled={currentQuestionIndex === 0}
                   data-testid="button-previous"
@@ -333,6 +339,7 @@ export default function PracticeTest() {
                   Previous
                 </Button>
                 <Button 
+                  className="ios-button-primary px-8 py-3"
                   onClick={handleNext}
                   disabled={currentQuestionIndex === questions.length - 1}
                   data-testid="button-next"
@@ -346,23 +353,21 @@ export default function PracticeTest() {
         </Card>
 
         {/* Question Navigator */}
-        <Card className="mt-6 p-6">
+        <Card className="ios-card mt-8 p-8">
           <CardContent className="p-0">
-            <h3 className="text-lg font-semibold mb-4" data-testid="text-navigator-title">Question Navigator</h3>
-            <div className="grid grid-cols-10 gap-2">
+            <h3 className="text-xl ios-title mb-6" data-testid="text-navigator-title">Question Navigator</h3>
+            <div className="grid grid-cols-8 md:grid-cols-10 gap-3">
               {questions.map((_, index) => (
                 <Button
                   key={index}
-                  variant={currentQuestionIndex === index ? "default" : "outline"}
-                  size="sm"
-                  className={`h-10 w-10 p-0 ${
-                    selectedAnswers[index] 
-                      ? currentQuestionIndex === index 
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-accent/20 text-accent border-accent'
-                      : ''
+                  className={`h-12 w-12 p-0 rounded-xl transition-all duration-200 ios-scale-in ${
+                    currentQuestionIndex === index 
+                      ? 'ios-button-primary shadow-md' 
+                      : selectedAnswers[index]
+                        ? 'bg-accent/20 text-accent border-accent/30 border hover:bg-accent/30'
+                        : 'ios-button-secondary'
                   } ${
-                    bookmarkedQuestions.has(index) ? 'ring-2 ring-yellow-400' : ''
+                    bookmarkedQuestions.has(index) ? 'ring-2 ring-amber-400 ring-offset-2' : ''
                   }`}
                   onClick={() => setCurrentQuestionIndex(index)}
                   data-testid={`button-question-${index}`}
@@ -371,18 +376,18 @@ export default function PracticeTest() {
                 </Button>
               ))}
             </div>
-            <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-6 space-y-4 sm:space-y-0">
+              <div className="flex items-center space-x-6 text-sm ios-body">
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-accent/20 border border-accent rounded mr-2"></div>
-                  <span>Answered</span>
+                  <div className="w-4 h-4 bg-accent/20 border border-accent/30 rounded-lg mr-2"></div>
+                  <span className="text-muted-foreground">Answered</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-4 h-4 border-2 border-yellow-400 rounded mr-2"></div>
-                  <span>Bookmarked</span>
+                  <div className="w-4 h-4 border-2 border-amber-400 rounded-lg mr-2"></div>
+                  <span className="text-muted-foreground">Bookmarked</span>
                 </div>
               </div>
-              <span data-testid="text-answered-count">
+              <span className="text-sm ios-subtitle text-foreground" data-testid="text-answered-count">
                 {answeredCount} of {questions.length} answered
               </span>
             </div>
