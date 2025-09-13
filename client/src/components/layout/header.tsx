@@ -27,98 +27,109 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
-      <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <Link href="/" className="flex items-center space-x-2" data-testid="logo-link">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <User className="text-primary-foreground text-lg" />
+    <header className="sticky top-0 z-50 ios-nav-blur border-b border-border/20 ios-fade-in">
+      <nav className="container mx-auto px-6 sm:px-8 lg:px-10">
+        <div className="flex justify-between items-center h-20">
+          <Link href="/" className="flex items-center space-x-3 ios-scale-in" data-testid="logo-link">
+            <div className="w-12 h-12 ios-gradient-bg rounded-2xl flex items-center justify-center shadow-sm">
+              <User className="text-primary-foreground text-xl" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">NurseEd</h1>
-              <p className="text-xs text-muted-foreground">Pakistan</p>
+              <h1 className="text-xl ios-title text-foreground">NurseEd</h1>
+              <p className="text-xs ios-body text-muted-foreground opacity-80">Pakistan</p>
             </div>
           </Link>
           
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-1">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`transition-colors font-medium ${
+                className={`px-4 py-2 rounded-xl transition-all duration-200 ios-subtitle text-sm ${
                   isActiveLink(link.href)
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-primary"
+                    ? "text-primary bg-primary/8 shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 }`}
                 data-testid={`nav-link-${link.label.toLowerCase().replace(" ", "-")}`}
               >
                 {link.label}
               </Link>
             ))}
-            {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full" data-testid="button-user-menu">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        {user?.firstName?.[0]?.toUpperCase()}{user?.lastName?.[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <div className="flex items-center justify-start gap-2 p-2">
-                    <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium" data-testid="text-user-name">
-                        {user?.firstName} {user?.lastName}
-                      </p>
-                      <p className="w-[200px] truncate text-sm text-muted-foreground" data-testid="text-user-email">
-                        {user?.email}
-                      </p>
+            <div className="ml-4 flex items-center space-x-3">
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      className="relative h-10 w-10 rounded-full hover:shadow-sm transition-all duration-200" 
+                      data-testid="button-user-menu"
+                    >
+                      <Avatar className="h-10 w-10 border-2 border-border/20">
+                        <AvatarFallback className="bg-primary/10 text-primary ios-subtitle">
+                          {user?.firstName?.[0]?.toUpperCase()}{user?.lastName?.[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="ios-card min-w-[220px] p-2">
+                    <div className="flex items-center justify-start gap-3 p-3 rounded-xl bg-muted/30">
+                      <Avatar className="h-12 w-12 border-2 border-border/20">
+                        <AvatarFallback className="bg-primary/10 text-primary ios-subtitle">
+                          {user?.firstName?.[0]?.toUpperCase()}{user?.lastName?.[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col space-y-1 leading-none">
+                        <p className="ios-subtitle text-foreground" data-testid="text-user-name">
+                          {user?.firstName} {user?.lastName}
+                        </p>
+                        <p className="text-sm text-muted-foreground ios-body truncate max-w-[140px]" data-testid="text-user-email">
+                          {user?.email}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild data-testid="menu-item-profile">
-                    <Link href="/profile" className="cursor-pointer">
-                      <UserCircle className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild data-testid="menu-item-settings">
-                    <Link href="/settings" className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={logout}
-                    data-testid="menu-item-logout"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button asChild data-testid="button-signin">
-                <Link href="/auth">Sign In</Link>
-              </Button>
-            )}
+                    <DropdownMenuSeparator className="my-2" />
+                    <DropdownMenuItem asChild data-testid="menu-item-profile" className="rounded-lg p-3 cursor-pointer">
+                      <Link href="/profile" className="flex items-center">
+                        <UserCircle className="mr-3 h-4 w-4 text-muted-foreground" />
+                        <span className="ios-body">Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild data-testid="menu-item-settings" className="rounded-lg p-3 cursor-pointer">
+                      <Link href="/settings" className="flex items-center">
+                        <Settings className="mr-3 h-4 w-4 text-muted-foreground" />
+                        <span className="ios-body">Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="my-2" />
+                    <DropdownMenuItem
+                      className="rounded-lg p-3 cursor-pointer text-destructive focus:text-destructive"
+                      onClick={logout}
+                      data-testid="menu-item-logout"
+                    >
+                      <LogOut className="mr-3 h-4 w-4" />
+                      <span className="ios-body">Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button asChild className="ios-button-primary px-6 py-2" data-testid="button-signin">
+                  <Link href="/auth">Sign In</Link>
+                </Button>
+              )}
+            </div>
           </div>
           
           {/* Mobile Menu Button */}
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden h-10 w-10 rounded-xl hover:bg-muted/40 transition-all duration-200"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             data-testid="button-mobile-menu"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </Button>
         </div>
