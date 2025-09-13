@@ -25,32 +25,33 @@ export default function Home() {
       <ExamModules />
       
       {/* Practice Test Demo */}
-      <section className="py-16 bg-muted/30" data-testid="practice-demo-section">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-foreground mb-4" data-testid="text-practice-demo-title">
-                Interactive Practice Tests
+      <section className="py-20 md:py-24 bg-muted/20" data-testid="practice-demo-section">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-10">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12 ios-fade-in">
+              <h2 className="text-3xl md:text-5xl ios-title text-foreground mb-6 leading-tight" data-testid="text-practice-demo-title">
+                Interactive{" "}
+                <span className="text-primary">Practice Tests</span>
               </h2>
-              <p className="text-lg text-muted-foreground" data-testid="text-practice-demo-subtitle">
+              <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto ios-body leading-relaxed" data-testid="text-practice-demo-subtitle">
                 Experience our adaptive testing system with immediate feedback and detailed explanations.
               </p>
             </div>
             
-            <Card className="p-6 md:p-8">
+            <Card className="ios-card p-8 md:p-10 ios-slide-up">
               <CardContent className="p-0">
                 {/* Question Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center space-x-4">
-                    <span className="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full" data-testid="badge-demo-exam-type">
+                    <span className="bg-primary/10 text-primary ios-subtitle text-sm px-4 py-2 rounded-2xl" data-testid="badge-demo-exam-type">
                       NCLEX-RN
                     </span>
-                    <span className="text-sm text-muted-foreground" data-testid="text-demo-question-number">
+                    <span className="text-sm text-muted-foreground ios-body" data-testid="text-demo-question-number">
                       Question 15 of 50
                     </span>
                   </div>
-                  <div className="text-sm text-muted-foreground flex items-center">
-                    <Clock className="mr-1 w-4 h-4" />
+                  <div className="text-sm text-muted-foreground flex items-center ios-body bg-muted/40 px-4 py-2 rounded-2xl">
+                    <Clock className="mr-2 w-4 h-4" />
                     <span data-testid="text-demo-time-remaining">12:45</span>
                   </div>
                 </div>
@@ -95,15 +96,15 @@ export default function Home() {
                 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-                  <Button variant="ghost" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="button-demo-bookmark">
+                  <Button variant="ghost" className="ios-button-secondary text-muted-foreground hover:text-foreground transition-colors" data-testid="button-demo-bookmark">
                     <Bookmark className="mr-2 w-4 h-4" />
                     Bookmark Question
                   </Button>
-                  <div className="flex space-x-4">
-                    <Button variant="outline" data-testid="button-demo-previous">
+                  <div className="flex space-x-3">
+                    <Button className="ios-button-secondary px-6 py-3" data-testid="button-demo-previous">
                       Previous
                     </Button>
-                    <Button data-testid="button-demo-submit">
+                    <Button className="ios-button-primary px-6 py-3" data-testid="button-demo-submit">
                       Submit Answer
                     </Button>
                   </div>
