@@ -104,25 +104,25 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen ios-auth-background flex items-center justify-center p-6">
+      <div className="w-full max-w-md space-y-8 ios-fade-in">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">NurseEd Pakistan</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Your gateway to nursing education excellence</p>
+          <h1 className="text-4xl md:text-5xl ios-title text-foreground mb-3">NurseEd Pakistan</h1>
+          <p className="text-lg ios-body text-muted-foreground">Your gateway to nursing education excellence</p>
         </div>
 
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center">Get Started</CardTitle>
-            <CardDescription className="text-center">
+        <Card className="ios-card w-full ios-slide-up border-0 shadow-sm">
+          <CardHeader className="pb-6">
+            <CardTitle className="text-3xl ios-title text-center text-foreground">Get Started</CardTitle>
+            <CardDescription className="text-center text-base ios-body text-muted-foreground leading-relaxed">
               Join thousands of nursing professionals advancing their careers
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login" data-testid="tab-login">Login</TabsTrigger>
-                <TabsTrigger value="register" data-testid="tab-register">Register</TabsTrigger>
+              <TabsList className="ios-tabs grid w-full grid-cols-2">
+                <TabsTrigger value="login" className="ios-tab-trigger" data-testid="tab-login">Login</TabsTrigger>
+                <TabsTrigger value="register" className="ios-tab-trigger" data-testid="tab-register">Register</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login" className="space-y-4">
@@ -133,9 +133,10 @@ export default function AuthPage() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel className="ios-subtitle text-foreground">Email</FormLabel>
                           <FormControl>
                             <Input 
+                              className="ios-input h-12 text-base"
                               placeholder="your.email@example.com" 
                               type="email"
                               data-testid="input-login-email"
@@ -152,10 +153,11 @@ export default function AuthPage() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <FormLabel className="ios-subtitle text-foreground">Password</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <Input
+                                className="ios-input h-12 text-base pr-12"
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Enter your password"
                                 data-testid="input-login-password"
@@ -165,7 +167,7 @@ export default function AuthPage() {
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors"
                                 onClick={() => setShowPassword(!showPassword)}
                                 data-testid="button-toggle-password"
                               >
@@ -184,7 +186,7 @@ export default function AuthPage() {
 
                     <Button 
                       type="submit" 
-                      className="w-full"
+                      className="ios-button-primary w-full h-12 text-base font-semibold"
                       disabled={loginMutation.isPending}
                       data-testid="button-login"
                     >
@@ -213,9 +215,10 @@ export default function AuthPage() {
                         name="firstName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>First Name</FormLabel>
+                            <FormLabel className="ios-subtitle text-foreground">First Name</FormLabel>
                             <FormControl>
                               <Input 
+                                className="ios-input h-12 text-base"
                                 placeholder="John"
                                 data-testid="input-register-firstname"
                                 {...field} 
@@ -231,9 +234,10 @@ export default function AuthPage() {
                         name="lastName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Last Name</FormLabel>
+                            <FormLabel className="ios-subtitle text-foreground">Last Name</FormLabel>
                             <FormControl>
                               <Input 
+                                className="ios-input h-12 text-base"
                                 placeholder="Doe"
                                 data-testid="input-register-lastname"
                                 {...field} 
@@ -250,9 +254,10 @@ export default function AuthPage() {
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Username</FormLabel>
+                          <FormLabel className="ios-subtitle text-foreground">Username</FormLabel>
                           <FormControl>
                             <Input 
+                              className="ios-input h-12 text-base"
                               placeholder="johndoe"
                               data-testid="input-register-username"
                               {...field} 
@@ -268,9 +273,10 @@ export default function AuthPage() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel className="ios-subtitle text-foreground">Email</FormLabel>
                           <FormControl>
                             <Input 
+                              className="ios-input h-12 text-base"
                               placeholder="your.email@example.com" 
                               type="email"
                               data-testid="input-register-email"
@@ -287,10 +293,11 @@ export default function AuthPage() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <FormLabel className="ios-subtitle text-foreground">Password</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <Input
+                                className="ios-input h-12 text-base pr-12"
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Minimum 6 characters"
                                 data-testid="input-register-password"
@@ -300,7 +307,7 @@ export default function AuthPage() {
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors"
                                 onClick={() => setShowPassword(!showPassword)}
                                 data-testid="button-toggle-register-password"
                               >
@@ -322,10 +329,11 @@ export default function AuthPage() {
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
+                          <FormLabel className="ios-subtitle text-foreground">Confirm Password</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <Input
+                                className="ios-input h-12 text-base pr-12"
                                 type={showConfirmPassword ? "text" : "password"}
                                 placeholder="Confirm your password"
                                 data-testid="input-register-confirm-password"
@@ -335,7 +343,7 @@ export default function AuthPage() {
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors"
                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 data-testid="button-toggle-confirm-password"
                               >
@@ -354,7 +362,7 @@ export default function AuthPage() {
 
                     <Button 
                       type="submit" 
-                      className="w-full"
+                      className="ios-button-primary w-full h-12 text-base font-semibold"
                       disabled={registerMutation.isPending}
                       data-testid="button-register"
                     >
