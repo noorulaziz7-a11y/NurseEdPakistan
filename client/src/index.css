@@ -199,7 +199,7 @@
 
 .ios-input:focus {
   @apply ring-2;
-  ring-color: hsl(210, 96%, 52%, 0.3);
+  --tw-ring-color: hsl(210 96% 52% / 0.3);
   border-color: hsl(210, 96%, 52%);
   background-color: hsl(0, 0%, 98%);
 }
@@ -305,4 +305,35 @@
 
 .ios-indicator-error {
   @apply ios-indicator bg-destructive;
+}
+
+/* iOS-style auth background */
+.ios-auth-background {
+  background: linear-gradient(135deg, 
+    hsl(0, 0%, 98%) 0%, 
+    hsl(210, 96%, 98%) 20%, 
+    hsl(0, 0%, 100%) 50%, 
+    hsl(185, 82%, 98%) 80%, 
+    hsl(0, 0%, 98%) 100%
+  );
+}
+
+.dark .ios-auth-background {
+  background: linear-gradient(135deg, 
+    hsl(0, 0%, 6%) 0%, 
+    hsl(210, 86%, 8%) 20%, 
+    hsl(0, 0%, 8%) 50%, 
+    hsl(185, 72%, 8%) 80%, 
+    hsl(0, 0%, 6%) 100%
+  );
+}
+
+/* iOS-style tabs */
+.ios-tabs {
+  @apply p-1 rounded-2xl border-0 shadow-sm;
+  background-color: hsl(0 0% 96% / 0.6);
+}
+
+.ios-tabs .ios-tab-trigger {
+  @apply rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm;
 }
