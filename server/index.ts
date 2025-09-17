@@ -1,3 +1,4 @@
+import http from "http";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
@@ -8,25 +9,29 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'nursing-education-app-dev-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production', // HTTPS in production
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "nursing-education-app-dev-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // HTTPS in production
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
 
+// Simple request logger for /api endpoints (keeps body capture lightly)
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
+  const originalResJson = res.json.bind(res);
+  // override res.json to capture the body for logging
+  (res as any).json = function (bodyJson: any, ...args: any[]) {
     capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
+    return originalResJson(bodyJson, ...args);
   };
 
   res.on("finish", () => {
@@ -34,11 +39,15 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        try {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        } catch {
+          // ignore stringify errors
+        }
       }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      if (logLine.length > 160) {
+        logLine = logLine.slice(0, 159) + "…";
       }
 
       log(logLine);
@@ -48,36 +57,66 @@ app.use((req, res, next) => {
   next();
 });
 
+// create an HTTP server now — this ensures we always have a server instance
+// to attach WebSocket/vite middleware to even if registerRoutes doesn't return one.
+const server = http.createServer(app);
+
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    // registerRoutes may set up API routes and middleware.
+    // If your registerRoutes function returns a server instance, that's OK,
+    // but we won't rely on it. We already created `server` above.
+    await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    // central error handler:
+    // - respond with JSON error message for API calls
+    // - log the error but do NOT re-throw it (re-throw can crash the process)
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err?.status || err?.statusCode || 500;
+      const message = err?.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
-  });
+      // log error server-side for debugging
+      try {
+        log(`ERROR ${status}: ${message}`);
+        if (err?.stack) {
+          // don't print huge stacks in production
+          if (process.env.NODE_ENV !== "production") {
+            console.error(err.stack);
+          }
+        }
+      } catch {
+        /* no-op */
+      }
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+      // send minimal error information to the client
+      if (!res.headersSent) {
+        res.status(status).json({ message });
+      }
+      // don't throw here — throwing inside error middleware will typically crash the server
+    });
+
+    // only setup vite in development so production static serving isn't affected
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    // bind to port
+    const port = parseInt(process.env.PORT || "5000", 10);
+    server.listen(
+      {
+        port,
+        host: "0.0.0.0",
+        reusePort: true,
+      },
+      () => {
+        log(`serving on port ${port}`);
+      }
+    );
+  } catch (err) {
+    // startup error — log and exit with non-zero code
+    console.error("Failed to start server:", err);
+    process.exit(1);
   }
-
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();
