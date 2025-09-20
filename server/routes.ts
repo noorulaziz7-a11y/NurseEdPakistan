@@ -97,3 +97,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Exam questions ro
+// Exam questions routes
+// TODO: implement exam-question routes here
+
+// End of file - ensure parser sees EOF cleanly
+export {}; // keeps TS happy if this file has only top-level code
