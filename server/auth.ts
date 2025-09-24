@@ -46,3 +46,13 @@ export class AuthService {
 
   static async login(loginData: LoginUser): Promise<User> {
     // Find use
+  }
+
+  static async getCurrentUser(userId: number): Promise<User | null> {
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return null;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _pw, ...userWithoutPassword } = user as any;
+    return userWithoutPassword as User;
