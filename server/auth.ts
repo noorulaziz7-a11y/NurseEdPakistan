@@ -7,7 +7,6 @@ const SALT_ROUNDS = process.env.SALT_ROUNDS ? parseInt(process.env.SALT_ROUNDS, 
 
 export class AuthService {
   static async hashPassword(password: string): Promise<string> {
-    // keep bcrypt usage centralized so it's easy to swap to bcryptjs if needed
     return bcrypt.hash(password, SALT_ROUNDS);
   }
 
@@ -16,7 +15,6 @@ export class AuthService {
   }
 
   static async register(userData: InsertUser): Promise<User> {
-    // Check if user already exists
     const existingUserByEmail = await storage.getUserByEmail(userData.email);
     if (existingUserByEmail) {
       throw new Error("User with this email already exists");
@@ -27,25 +25,30 @@ export class AuthService {
       throw new Error("Username is already taken");
     }
 
-    // Hash password
     const hashedPassword = await this.hashPassword(userData.password);
 
-    // Create user
     const newUser = await storage.createUser({
       ...userData,
       password: hashedPassword,
     });
 
     // Remove password from response
-    // use object rest to exclude password safely
-    // Note: ensure storage.createUser returns the password field; if it doesn't, this still works.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _pw, ...userWithoutPassword } = newUser as any;
+    const { password: _pw, ...userWithoutPassword } = newUser as User;
     return userWithoutPassword as User;
   }
 
   static async login(loginData: LoginUser): Promise<User> {
-    // Find use
+    let user = await storage.getUserByEmail(loginData.email);
+    if (!user && "username" in loginData && loginData.username) {
+      user = await storage.getUserByUsername(loginData.username);
+    }
+    if (!user) {
+      throw new Error("Invalid credentials");
+    }
+    // Now TypeScript knows user is a User
+    const { password: _pw, ...userWithoutPassword } = user;
+
+    return userWithoutPassword as User;
   }
 
   static async getCurrentUser(userId: number): Promise<User | null> {
@@ -53,6 +56,7 @@ export class AuthService {
     if (!user) {
       return null;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _pw, ...userWithoutPassword } = user as any;
+    const { password: _pw, ...userWithoutPassword } = user;
     return userWithoutPassword as User;
+  }
+}
