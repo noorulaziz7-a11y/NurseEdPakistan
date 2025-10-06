@@ -1,62 +1,38 @@
 // server/auth.ts
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { storage } from "./storage";
-import type { LoginUser, InsertUser, User } from "@shared/schema";
+import { insertUserSchema, loginUserSchema } from "@shared/schema";
+import type { User } from "@shared/schema";
 
-const SALT_ROUNDS = process.env.SALT_ROUNDS ? parseInt(process.env.SALT_ROUNDS, 10) : 10;
+export const AuthService = {
+  async register(data: unknown): Promise<User> {
+    const parsed = insertUserSchema.parse(data);
+    const hashedPassword = await bcrypt.hash(parsed.password, 10);
 
-export class AuthService {
-  static async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, SALT_ROUNDS);
-  }
-
-  static async comparePassword(password: string, hashedPassword: string): Promise<boolean> {
-    return bcrypt.compare(password, hashedPassword);
-  }
-
-  static async register(userData: InsertUser): Promise<User> {
-    const existingUserByEmail = await storage.getUserByEmail(userData.email);
-    if (existingUserByEmail) {
-      throw new Error("User with this email already exists");
-    }
-
-    const existingUserByUsername = await storage.getUserByUsername(userData.username);
-    if (existingUserByUsername) {
-      throw new Error("Username is already taken");
-    }
-
-    const hashedPassword = await this.hashPassword(userData.password);
-
-    const newUser = await storage.createUser({
-      ...userData,
+    const userToInsert = {
+      ...parsed,
       password: hashedPassword,
-    });
+    };
 
-    // Remove password from response
-    const { password: _pw, ...userWithoutPassword } = newUser as User;
-    return userWithoutPassword as User;
-  }
+    const user = await storage.createUser(userToInsert);
+    return user;
+  },
 
-  static async login(loginData: LoginUser): Promise<User> {
-    let user = await storage.getUserByEmail(loginData.email);
-    if (!user && "username" in loginData && loginData.username) {
-      user = await storage.getUserByUsername(loginData.username);
-    }
-    if (!user) {
-      throw new Error("Invalid credentials");
-    }
-    // Now TypeScript knows user is a User
-    const { password: _pw, ...userWithoutPassword } = user;
+  async login(data: unknown): Promise<User | null> {
+    const parsed = loginUserSchema.parse(data);
 
-    return userWithoutPassword as User;
-  }
+    const user = await storage.getUserByEmail(parsed.email);
+    if (!user) return null;
 
-  static async getCurrentUser(userId: number): Promise<User | null> {
+    const passwordMatch = await bcrypt.compare(parsed.password, user.password);
+    if (!passwordMatch) return null;
+
+    await storage.updateUserLastLogin(user.id);
+    return user;
+  },
+
+  async getCurrentUser(userId: number): Promise<User | null> {
     const user = await storage.getUserById(userId);
-    if (!user) {
-      return null;
-    }
-    const { password: _pw, ...userWithoutPassword } = user;
-    return userWithoutPassword as User;
-  }
-}
+    return user || null;
+  },
+};

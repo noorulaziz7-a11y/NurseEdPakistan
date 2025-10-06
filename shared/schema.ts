@@ -3,6 +3,7 @@ import { pgTable, text, varchar, integer, jsonb, timestamp, boolean } from "driz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+/* ---------------- USERS TABLE ---------------- */
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
@@ -15,6 +16,7 @@ export const users = pgTable("users", {
   lastLoginAt: timestamp("last_login_at"),
 });
 
+/* ---------------- EXAM QUESTIONS ---------------- */
 export const examQuestions = pgTable("exam_questions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   examType: text("exam_type").notNull(), // NCLEX-RN, MOH, SNLE
@@ -26,6 +28,7 @@ export const examQuestions = pgTable("exam_questions", {
   category: text("category").notNull(),
 });
 
+/* ---------------- COLLEGES ---------------- */
 export const colleges = pgTable("colleges", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -41,6 +44,7 @@ export const colleges = pgTable("colleges", {
   accreditation: jsonb("accreditation"), // array of accreditations
 });
 
+/* ---------------- STUDY MATERIALS ---------------- */
 export const studyMaterials = pgTable("study_materials", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -56,6 +60,7 @@ export const studyMaterials = pgTable("study_materials", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+/* ---------------- NEWS ARTICLES ---------------- */
 export const newsArticles = pgTable("news_articles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -69,6 +74,7 @@ export const newsArticles = pgTable("news_articles", {
   featured: boolean("featured").default(false),
 });
 
+/* ---------------- PRACTICE TESTS ---------------- */
 export const practiceTests = pgTable("practice_tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id),
@@ -81,6 +87,7 @@ export const practiceTests = pgTable("practice_tests", {
   score: integer("score"), // percentage
 });
 
+/* ---------------- ZOD SCHEMAS ---------------- */
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -119,16 +126,22 @@ export const insertPracticeTestSchema = createInsertSchema(practiceTests).omit({
   completedAt: true,
 });
 
+/* ---------------- TYPES ---------------- */
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginUserSchema>;
+
 export type ExamQuestion = typeof examQuestions.$inferSelect;
 export type InsertExamQuestion = z.infer<typeof insertExamQuestionSchema>;
+
 export type College = typeof colleges.$inferSelect;
 export type InsertCollege = z.infer<typeof insertCollegeSchema>;
+
 export type StudyMaterial = typeof studyMaterials.$inferSelect;
 export type InsertStudyMaterial = z.infer<typeof insertStudyMaterialSchema>;
+
 export type NewsArticle = typeof newsArticles.$inferSelect;
 export type InsertNewsArticle = z.infer<typeof insertNewsArticleSchema>;
+
 export type PracticeTest = typeof practiceTests.$inferSelect;
 export type InsertPracticeTest = z.infer<typeof insertPracticeTestSchema>;

@@ -252,7 +252,7 @@ export class MemStorage implements IStorage {
       colleges = colleges.filter(c => c.city === filters.city);
     }
     if (filters?.programs && filters.programs !== "All Programs") {
-      colleges = colleges.filter(c => (c.programs as string[]).includes(filters.programs));
+      colleges = colleges.filter(c => c.programs && (c.programs as string[]).includes(filters.programs!));
     }
     
     return colleges;

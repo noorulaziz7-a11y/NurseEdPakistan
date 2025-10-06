@@ -15,20 +15,32 @@ export default function Colleges() {
   const [selectedCity, setSelectedCity] = useState("All Cities");
   const [selectedProgram, setSelectedProgram] = useState("All Programs");
 
-  const { data: colleges, isLoading } = useQuery<College[]>({
-    queryKey: ["/api/colleges", { city: selectedCity, programs: selectedProgram }],
+  // ✅ Fixed: Added queryFn to actually fetch data
+  const { data: colleges, isLoading, error } = useQuery<College[]>({
+    queryKey: ["/api/colleges", selectedCity, selectedProgram],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedCity !== "All Cities") params.append("city", selectedCity);
+      if (selectedProgram !== "All Programs") params.append("program", selectedProgram);
+
+      const res = await fetch(`/api/colleges?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch colleges");
+      return res.json();
+    },
   });
 
-  const filteredColleges = colleges?.filter(college => {
-    const matchesSearch = searchTerm === "" || 
-      college.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      college.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
-  }) || [];
+  // ✅ Filtered Colleges (Client-side search)
+  const filteredColleges =
+    colleges?.filter((college) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        college.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        college.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+    }) || [];
 
   const handleSearch = () => {
-    // Search is automatically handled by the filter effect
+    // Search handled automatically by filter
   };
 
   return (
@@ -41,7 +53,8 @@ export default function Colleges() {
               Nursing Colleges Directory
             </h1>
             <p className="text-xl text-secondary-foreground/90 mb-8" data-testid="text-colleges-subtitle">
-              Comprehensive database of nursing institutions across Pakistan with detailed information about programs, admissions, and facilities.
+              Comprehensive database of nursing institutions across Pakistan with detailed information about programs,
+              admissions, and facilities.
             </p>
           </div>
         </div>
@@ -65,49 +78,49 @@ export default function Colleges() {
                   data-testid="input-search-colleges"
                 />
               </div>
-              
+
               <div>
-                <Label className="block text-sm font-medium text-card-foreground mb-2">
-                  City
-                </Label>
+                <Label className="block text-sm font-medium text-card-foreground mb-2">City</Label>
                 <Select value={selectedCity} onValueChange={setSelectedCity}>
                   <SelectTrigger data-testid="select-city">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {COLLEGE_CITIES.map((city) => (
-                      <SelectItem key={city} value={city} data-testid={`select-option-city-${city.toLowerCase().replace(' ', '-')}`}>
+                      <SelectItem
+                        key={city}
+                        value={city}
+                        data-testid={`select-option-city-${city.toLowerCase().replace(" ", "-")}`}
+                      >
                         {city}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
-                <Label className="block text-sm font-medium text-card-foreground mb-2">
-                  Program Type
-                </Label>
+                <Label className="block text-sm font-medium text-card-foreground mb-2">Program Type</Label>
                 <Select value={selectedProgram} onValueChange={setSelectedProgram}>
                   <SelectTrigger data-testid="select-program">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {COLLEGE_PROGRAMS.map((program) => (
-                      <SelectItem key={program} value={program} data-testid={`select-option-program-${program.toLowerCase().replace(' ', '-')}`}>
+                      <SelectItem
+                        key={program}
+                        value={program}
+                        data-testid={`select-option-program-${program.toLowerCase().replace(" ", "-")}`}
+                      >
                         {program}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="flex items-end">
-                <Button 
-                  className="w-full" 
-                  onClick={handleSearch}
-                  data-testid="button-search"
-                >
+                <Button className="w-full" onClick={handleSearch} data-testid="button-search">
                   <Search className="mr-2 w-4 h-4" />
                   Search
                 </Button>
@@ -118,11 +131,17 @@ export default function Colleges() {
 
         {/* Results Summary */}
         <div className="mb-6">
+          {error && <p className="text-red-500">Failed to load colleges. Please try again later.</p>}
           <p className="text-muted-foreground" data-testid="text-results-count">
-            {isLoading ? "Loading..." : `Found ${filteredColleges.length} colleges`}
-            {searchTerm && ` matching "${searchTerm}"`}
-            {selectedCity !== "All Cities" && ` in ${selectedCity}`}
-            {selectedProgram !== "All Programs" && ` offering ${selectedProgram}`}
+            {isLoading
+              ? "Loading..."
+              : `Found ${filteredColleges.length} colleges${
+                  searchTerm ? ` matching "${searchTerm}"` : ""
+                }${
+                  selectedCity !== "All Cities" ? ` in ${selectedCity}` : ""
+                }${
+                  selectedProgram !== "All Programs" ? ` offering ${selectedProgram}` : ""
+                }`}
           </p>
         </div>
 
@@ -146,12 +165,14 @@ export default function Colleges() {
         ) : filteredColleges.length === 0 ? (
           <Card className="p-8">
             <CardContent className="text-center">
-              <h3 className="text-xl font-semibold mb-4" data-testid="text-no-results">No colleges found</h3>
+              <h3 className="text-xl font-semibold mb-4" data-testid="text-no-results">
+                No colleges found
+              </h3>
               <p className="text-muted-foreground mb-4">
                 Try adjusting your search criteria or filters to find more colleges.
               </p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setSearchTerm("");
                   setSelectedCity("All Cities");
@@ -174,11 +195,7 @@ export default function Colleges() {
             {/* Load More Button */}
             {filteredColleges.length >= 10 && (
               <div className="text-center">
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  data-testid="button-load-more"
-                >
+                <Button variant="outline" size="lg" data-testid="button-load-more">
                   Load More Colleges
                 </Button>
               </div>

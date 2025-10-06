@@ -21,27 +21,21 @@ import {
 import { db } from "./db";
 import { eq, like, and, desc } from "drizzle-orm";
 
-/**
- * Concrete storage implementation using drizzle-orm.
- * NOTE: we intentionally do not import IStorage from "./storage" here
- * to avoid circular imports. If you have an interface file, import it
- * from that file instead.
- */
 export class DatabaseStorage {
-  // User methods
+  // ---------------- USERS ----------------
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -53,22 +47,20 @@ export class DatabaseStorage {
     await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
   }
 
-  // Exam Question methods
+  // ---------------- EXAM QUESTIONS ----------------
   async getExamQuestions(examType: string, limit?: number): Promise<ExamQuestion[]> {
-    let query = db.select().from(examQuestions).where(eq(examQuestions.examType, examType));
+    let query: any = db.select().from(examQuestions).where(eq(examQuestions.examType, examType));
 
-    if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
-      // drizzle's limit expects a number; guard against 0 / negative
+    if (limit && limit > 0) {
       query = query.limit(limit);
     }
 
-    const rows = await query;
-    return rows;
+    return await query;
   }
 
   async getExamQuestionById(id: string): Promise<ExamQuestion | undefined> {
     const [question] = await db.select().from(examQuestions).where(eq(examQuestions.id, id));
-    return question || undefined;
+    return question;
   }
 
   async createExamQuestion(insertQuestion: InsertExamQuestion): Promise<ExamQuestion> {
@@ -76,39 +68,33 @@ export class DatabaseStorage {
     return question;
   }
 
-  // College methods
+  // ---------------- COLLEGES ----------------
   async getColleges(filters?: { city?: string; type?: string; programs?: string }): Promise<College[]> {
-    let query = db.select().from(colleges);
     const conditions: any[] = [];
 
-    const city = (filters?.city ?? "").toString().trim();
-    if (city && city !== "All Cities") {
-      conditions.push(eq(colleges.city, city));
+    if (filters?.city && filters.city !== "All Cities") {
+      conditions.push(eq(colleges.city, filters.city));
     }
 
-    const typeFilter = (filters?.type ?? "").toString().trim();
-    if (typeFilter) {
-      conditions.push(eq(colleges.type, typeFilter));
+    if (filters?.type) {
+      conditions.push(eq(colleges.type, filters.type));
     }
 
-    const programs = (filters?.programs ?? "").toString().trim();
-    if (programs && programs !== "All Programs") {
-      // Conservative string-based filter: use LIKE to match CSV or simple stored strings.
-      // If programs are stored as JSON/array, replace this with a JSON/array query (Postgres: @>).
-      conditions.push(like(colleges.programs as any, `%${programs}%`));
+    if (filters?.programs && filters.programs !== "All Programs") {
+      conditions.push(like(colleges.programs, `%${filters.programs}%`));
     }
 
+    let query: any = db.select().from(colleges);
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
     }
 
-    const rows = await query;
-    return rows;
+    return await query;
   }
 
   async getCollegeById(id: string): Promise<College | undefined> {
     const [college] = await db.select().from(colleges).where(eq(colleges.id, id));
-    return college || undefined;
+    return college;
   }
 
   async createCollege(insertCollege: InsertCollege): Promise<College> {
@@ -116,24 +102,22 @@ export class DatabaseStorage {
     return college;
   }
 
-  // Study Material methods
+  // ---------------- STUDY MATERIALS ----------------
   async getStudyMaterials(category?: string): Promise<StudyMaterial[]> {
-    let query = db.select().from(studyMaterials);
+    let query: any = db.select().from(studyMaterials);
 
-    const cat = (category ?? "").toString().trim();
-    if (cat && cat !== "All Materials") {
-      query = query.where(eq(studyMaterials.category, cat));
+    if (category && category !== "All Materials") {
+      query = query.where(eq(studyMaterials.category, category));
     }
 
-    // chain ordering before awaiting
     query = query.orderBy(desc(studyMaterials.updatedAt));
-    const rows = await query;
-    return rows;
+
+    return await query;
   }
 
   async getStudyMaterialById(id: string): Promise<StudyMaterial | undefined> {
     const [material] = await db.select().from(studyMaterials).where(eq(studyMaterials.id, id));
-    return material || undefined;
+    return material;
   }
 
   async createStudyMaterial(insertMaterial: InsertStudyMaterial): Promise<StudyMaterial> {
@@ -141,27 +125,25 @@ export class DatabaseStorage {
     return material;
   }
 
-  // News Article methods
+  // ---------------- NEWS ARTICLES ----------------
   async getNewsArticles(limit?: number, featured?: boolean): Promise<NewsArticle[]> {
-    let query = db.select().from(newsArticles);
+    let query: any = db.select().from(newsArticles);
 
-    if (typeof featured === "boolean") {
+    if (featured !== undefined) {
       query = query.where(eq(newsArticles.featured, featured));
     }
 
-    query = query.orderBy(desc(newsArticles.publishedAt));
-
-    if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
+    if (limit && limit > 0) {
       query = query.limit(limit);
     }
 
-    const rows = await query;
-    return rows;
+    query = query.orderBy(desc(newsArticles.publishedAt));
+    return await query;
   }
 
   async getNewsArticleById(id: string): Promise<NewsArticle | undefined> {
     const [article] = await db.select().from(newsArticles).where(eq(newsArticles.id, id));
-    return article || undefined;
+    return article;
   }
 
   async createNewsArticle(insertArticle: InsertNewsArticle): Promise<NewsArticle> {
@@ -169,14 +151,15 @@ export class DatabaseStorage {
     return article;
   }
 
-  // Practice Test methods
+  // ---------------- PRACTICE TESTS ----------------
   async getPracticeTests(userId: string): Promise<PracticeTest[]> {
     const rows = await db
       .select()
       .from(practiceTests)
       .where(eq(practiceTests.userId, userId))
       .orderBy(desc(practiceTests.completedAt));
-    return rows;
+
+    return rows as PracticeTest[];
   }
 
   async createPracticeTest(insertTest: InsertPracticeTest): Promise<PracticeTest> {
