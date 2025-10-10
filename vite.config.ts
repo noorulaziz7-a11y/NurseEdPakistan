@@ -1,54 +1,45 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { fileURLToPath, URL } from "node:url"; // <-- ADDED THIS IMPORT
 
 /**
  * Vite config for a client folder inside a monorepo/project root.
- * - root: client directory
- * - build.outDir: dist/public (so server can serve dist/*)
- * - aliases: mirror these in tsconfig.json "paths"
  */
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // ✅ UPDATED to use the modern ESM-compatible syntax
     alias: {
-      "@": path.resolve(__dirname, "client", "src"),
-      "@shared": path.resolve(__dirname, "shared"),
-      "@assets": path.resolve(__dirname, "attached_assets"),
+      "@": fileURLToPath(new URL("./client/src", import.meta.url)),
+      "@shared": fileURLToPath(new URL("./shared", import.meta.url)),
+      "@assets": fileURLToPath(new URL("./attached_assets", import.meta.url)),
     },
   },
   // the client app lives in /client
-  root: path.resolve(__dirname, "client"),
+  root: path.resolve(fileURLToPath(new URL(".", import.meta.url)), "client"),
   build: {
     // final client files go to dist/public so your server can serve dist
-    outDir: path.resolve(__dirname, "dist", "public"),
+    outDir: path.resolve(fileURLToPath(new URL(".", import.meta.url)), "dist", "public"),
     emptyOutDir: true,
   },
   server: {
     port: 5173,
     open: true,
-    // Uncomment and set correct backend port to enable API proxying during dev.
-    // Useful if your Express server runs on localhost:4000 (example).
-    /*
     proxy: {
-      // proxies /api/* to the backend server during development
       "/api": {
-        target: "http://localhost:4000",
+        target: "http://localhost:5000", // Your backend port
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, "/api"),
       },
     },
-    */
   },
-  // exclude server-only/node-native packages from dependency pre-bundling
   optimizeDeps: {
     exclude: [
-      // add packages that belong to server-side code only, e.g. DB drivers, ORMs
       "pg",
       "drizzle-orm",
       "@neondatabase/serverless",
-      "ws"
+      "ws",
     ],
   },
 });

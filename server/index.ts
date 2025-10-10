@@ -1,10 +1,20 @@
+
+import "dotenv/config";
+
 import http from "http";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { seedDatabase } from "./seed";
 
 const app = express();
+
+// Seed database in development
+if (app.get("env") === "development") {
+  seedDatabase().catch(console.error);
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -27,29 +37,10 @@ app.use((req, res, next) => {
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json.bind(res);
-  // override res.json to capture the body for logging
-  (res as any).json = function (bodyJson: any, ...args: any[]) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson(bodyJson, ...args);
-  };
-
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        try {
-          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-        } catch {
-          // ignore stringify errors
-        }
-      }
-
-      if (logLine.length > 160) {
-        logLine = logLine.slice(0, 159) + "…";
-      }
-
+      const logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       log(logLine);
     }
   });

@@ -37,6 +37,10 @@ export async function registerRoutes(app: Express): Promise<void> {
       const loginData = loginUserSchema.parse(req.body);
       const user = await AuthService.login(loginData);
 
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
       req.session.regenerate((err: any) => {
         if (err) return next(err);
         req.session.userId = user.id;
@@ -65,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const user = await AuthService.getCurrentUser(req.session.userId);
+      const user = await AuthService.getCurrentUser(parseInt(req.session.userId, 10));
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -79,8 +83,15 @@ export async function registerRoutes(app: Express): Promise<void> {
   // ---------------- COLLEGES ROUTE ----------------
   app.get("/api/colleges", async (req: Request, res: Response) => {
     try {
-      console.log("📡 Fetching colleges...");
-      const colleges = await storage.getColleges();
+      console.log("📡 Fetching colleges with filters:", req.query);
+      const { city, program } = req.query;
+
+      const filters = {
+        city: city as string | undefined,
+        programs: program as string | undefined,
+      };
+
+      const colleges = await storage.getColleges(filters);
       console.log(`✅ Found ${colleges.length} colleges`);
       res.json(colleges);
     } catch (error) {
