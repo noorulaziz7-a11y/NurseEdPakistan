@@ -9,12 +9,12 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <User className="text-primary-foreground text-lg" />
+              <div className="w-10 h-10 bg-blue rounded-lg flex items-center justify-center">
+                <User className="text-white text-lg" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-card-foreground">NurseEd</h3>
-                <p className="text-sm text-muted-foreground">Pakistan</p>
+                <h3 className="text-xl font-bold text-card-foreground">Nursing Educator Hub</h3>
+          
               </div>
             </div>
             <p className="text-muted-foreground text-sm mb-4">
@@ -41,7 +41,7 @@ export default function Footer() {
               <li><Link href="/exam-prep" className="hover:text-foreground transition-colors" data-testid="footer-link-moh">MOH Exam Prep</Link></li>
               <li><Link href="/exam-prep" className="hover:text-foreground transition-colors" data-testid="footer-link-snle">SNLE Preparation</Link></li>
               <li><Link href="/practice-test/NCLEX-RN" className="hover:text-foreground transition-colors" data-testid="footer-link-practice">Practice Tests</Link></li>
-              <li><Link href="/study-materials" className="hover:text-foreground transition-colors" data-testid="footer-link-materials">Study Materials</Link></li>
+              <li><Link href="/study-library" className="hover:text-foreground transition-colors" data-testid="footer-link-materials">Study Library</Link></li>
             </ul>
           </div>
           
@@ -65,14 +65,14 @@ export default function Footer() {
               <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-link-help">Help Center</a></li>
               <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-link-privacy">Privacy Policy</a></li>
               <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-link-terms">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-link-about">About Us</a></li>
+              <li><Link href="/about-us" className="hover:text-foreground transition-colors" data-testid="footer-link-about">About Us</Link></li>
             </ul>
           </div>
         </div>
         
         <div className="border-t border-border mt-8 pt-8 text-center">
           <p className="text-sm text-muted-foreground" data-testid="text-copyright">
-            © 2024 NurseEd Pakistan. All rights reserved. | Designed for Pakistani nursing professionals.
+            © 2025 Nursing Educator Hub. All rights reserved. | Designed for BSN Students and Registered Nurses.
           </p>
         </div>
       </div>

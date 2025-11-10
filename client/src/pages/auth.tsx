@@ -107,7 +107,7 @@ export default function AuthPage() {
     <div className="min-h-screen ios-auth-background flex items-center justify-center p-6">
       <div className="w-full max-w-md space-y-8 ios-fade-in">
         <div className="text-center">
-          <h1 className="text-4xl md:text-5xl ios-title text-foreground mb-3">NurseEd Pakistan</h1>
+          <h1 className="text-4xl md:text-5xl ios-title text-foreground mb-3">Nursing Educator</h1>
           <p className="text-lg ios-body text-muted-foreground">Your gateway to nursing education excellence</p>
         </div>
 

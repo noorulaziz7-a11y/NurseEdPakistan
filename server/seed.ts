@@ -84,6 +84,7 @@ export async function seedDatabase() {
     // Seed study materials
     const sampleMaterials: InsertStudyMaterial[] = [
       {
+        examType: "General",
         title: "Fundamentals of Nursing Practice",
         description: "Comprehensive guide covering basic nursing principles, patient care techniques, and fundamental nursing procedures.",
         category: "Fundamentals",
@@ -91,10 +92,10 @@ export async function seedDatabase() {
         level: "beginner",
         isPremium: false,
         fileUrl: "/materials/fundamentals-nursing.pdf",
-        pageCount: 245,
         rating: 5
       },
       {
+        examType: "General",
         title: "Medical-Surgical Nursing Handbook",
         description: "Advanced reference covering medical-surgical nursing concepts, pathophysiology, and evidence-based practice guidelines.",
         category: "Medical-Surgical",
@@ -102,10 +103,10 @@ export async function seedDatabase() {
         level: "advanced",
         isPremium: true,
         fileUrl: "/materials/medsurg-handbook.epub",
-        pageCount: 1200,
         rating: 5
       },
       {
+        examType: "General",
         title: "Clinical Skills Video Series",
         description: "Step-by-step video demonstrations of essential nursing procedures and clinical skills with expert commentary.",
         category: "Clinical Skills",

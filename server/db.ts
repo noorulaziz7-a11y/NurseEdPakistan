@@ -7,11 +7,21 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+// Export unconditional names; provide safe stubs when DATABASE_URL is missing.
+const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+export const pool: Pool | undefined = hasDatabaseUrl
+  ? new Pool({ connectionString: process.env.DATABASE_URL })
+  : undefined;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const db: any = hasDatabaseUrl
+  ? drizzle({ client: pool as Pool, schema })
+  : new Proxy(
+      {},
+      {
+        get() {
+          throw new Error("DATABASE_URL must be set before using the database layer.");
+        },
+      }
+    );

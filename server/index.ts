@@ -5,18 +5,34 @@ import http from "http";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { seedDatabase } from "./seed";
+// vite middleware is imported dynamically later to avoid linking issues during server-only runs
 
 const app = express();
 
-// Seed database in development
-if (app.get("env") === "development") {
-  seedDatabase().catch(console.error);
+// Seed database in development only when a database is configured
+if (app.get("env") === "development" && process.env.DATABASE_URL) {
+  // Dynamically import to avoid loading DB code when no DATABASE_URL
+  import("./seed").then(m => m.seedDatabase().catch(console.error));
 }
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Development CORS (allow frontend dev server origins)
+if (app.get("env") === "development") {
+  app.use((req, res, next) => {
+    const origin = (process.env.CORS_ORIGIN as string) || (req.headers.origin as string) || "*";
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Vary", "Origin");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+}
 
 // Session configuration
 app.use(
@@ -41,7 +57,7 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       const logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      log(logLine);
+      console.log(logLine);
     }
   });
 
@@ -68,7 +84,7 @@ const server = http.createServer(app);
 
       // log error server-side for debugging
       try {
-        log(`ERROR ${status}: ${message}`);
+        console.error(`ERROR ${status}: ${message}`);
         if (err?.stack) {
           // don't print huge stacks in production
           if (process.env.NODE_ENV !== "production") {
@@ -86,11 +102,15 @@ const server = http.createServer(app);
       // don't throw here — throwing inside error middleware will typically crash the server
     });
 
-    // only setup vite in development so production static serving isn't affected
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
-      serveStatic(app);
+    // In development, the client runs via its own Vite dev server (separate process).
+    // In production, serve built static files if available.
+    if (app.get("env") !== "development") {
+      try {
+        const viteModule: any = await import("./vite");
+        viteModule.serveStatic(app);
+      } catch (e) {
+        console.warn("Static file serving is unavailable:", e instanceof Error ? e.message : e);
+      }
     }
 
     // bind to port
@@ -102,7 +122,7 @@ const server = http.createServer(app);
         reusePort: true,
       },
       () => {
-        log(`serving on port ${port}`);
+        console.log(`✅ Server running at http://localhost:${port}`);
       }
     );
   } catch (err) {

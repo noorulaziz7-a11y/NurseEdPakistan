@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import CollegeCard from "@/components/cards/college-card";
+import CollegeCardSkeleton from "@/components/skeleton/CollegeCardSkeleton";
 import { COLLEGE_CITIES, COLLEGE_PROGRAMS } from "@/lib/constants";
 import type { College } from "@shared/schema";
 
@@ -46,11 +47,11 @@ export default function Colleges() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <section className="bg-gradient-to-r from-secondary to-accent text-secondary-foreground py-16">
+      <section className="bg-gradient-to-r from-secondary to-accent text-white py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-6" data-testid="text-colleges-title">
-              Nursing Colleges Directory
+              Recognised Nursing Colleges in Pakistan
             </h1>
             <p className="text-xl text-secondary-foreground/90 mb-8" data-testid="text-colleges-subtitle">
               Comprehensive database of nursing institutions across Pakistan with detailed information about programs,
@@ -149,17 +150,7 @@ export default function Colleges() {
         {isLoading ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="p-6">
-                <div className="animate-pulse">
-                  <div className="h-6 bg-muted rounded w-3/4 mb-4"></div>
-                  <div className="h-4 bg-muted rounded w-1/2 mb-4"></div>
-                  <div className="h-16 bg-muted rounded mb-4"></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="h-4 bg-muted rounded"></div>
-                    <div className="h-4 bg-muted rounded"></div>
-                  </div>
-                </div>
-              </Card>
+              <CollegeCardSkeleton key={i} />
             ))}
           </div>
         ) : filteredColleges.length === 0 ? (

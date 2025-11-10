@@ -12,12 +12,12 @@
   --popover-foreground: hsl(0, 0%, 12%);
   
   /* iOS Blue - main system color */
-  --primary: hsl(210, 96%, 52%);
+  --primary: hsl(210, 85%, 55%);
   --primary-foreground: hsl(0, 0%, 100%);
   
   /* iOS Teal - secondary accent */
-  --secondary: hsl(185, 82%, 47%);
-  --secondary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(195, 35%, 65%);
+  --secondary-foreground: hsl(0, 21%, 26%);
   
   /* iOS Gray system */
   --muted: hsl(0, 0%, 96%);
@@ -248,6 +248,34 @@
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* Blob animation for background patterns */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
 
 /* iOS-style progress bar */

@@ -1,54 +1,57 @@
 import { Link } from "wouter";
-import { ClipboardCheck, University, BookOpen } from "lucide-react";
+import { ClipboardCheck, Newspaper, BookOpen } from "lucide-react";
+import React from "react";
 
-export default function PlatformOverview() {
-  const features = [
-    {
-      icon: ClipboardCheck,
-      title: "Exam Preparation",
-      description: "Comprehensive modules for NCLEX-RN, MOH, and SNLE exams with practice questions and detailed explanations.",
-      link: "/exam-prep",
-      linkText: "Explore Exams",
-      color: "bg-primary/10 text-primary",
-      gradient: "from-primary/5 to-primary/10"
-    },
-    {
-      icon: University,
-      title: "College Directory", 
-      description: "Complete database of nursing colleges across Pakistan with admission details, programs, and contact information.",
-      link: "/colleges",
-      linkText: "Find Colleges",
-      color: "bg-secondary/10 text-secondary",
-      gradient: "from-secondary/5 to-secondary/10"
-    },
-    {
-      icon: BookOpen,
-      title: "Study Resources",
-      description: "Downloadable study materials, textbooks, and reference guides organized by subject and difficulty level.",
-      link: "/study-materials", 
-      linkText: "Access Materials",
-      color: "bg-accent/10 text-accent",
-      gradient: "from-accent/5 to-accent/10"
-    }
-  ];
+const PLATFORM_TITLE = "Everything You Need to Succeed";
+const PLATFORM_SUBTITLE = "From exam preparation to career guidance, Nursing Educator provides all the tools and resources you need for Nursing success.";
 
+const features = [
+  {
+    icon: ClipboardCheck,
+    title: "Exam Preparation",
+    description: "Comprehensive modules for NCLEX-RN, MOH, and SNLE exams with practice questions and detailed explanations.",
+    link: "/exam-prep",
+    linkText: "Explore Exams",
+    color: "text-blue-600",
+    gradient: "from-blue-100 via-blue-50 to-blue-100",
+  },
+  {
+    icon: Newspaper,
+    title: "News",
+    description: "Stay updated with the latest news and developments in the nursing field.",
+    link: "/news",
+    linkText: "Read News",
+    color: "bg-indigo-100 text-indigo-600",
+    gradient: "from-indigo-50 to-indigo-100"
+  },
+  {
+    icon: BookOpen,
+    title: "Study Library",
+    description: "Downloadable study materials, textbooks, and reference guides organized by subject and difficulty level.",
+    link: "/Study-Library",
+    linkText: "Access Materials",
+    color: "bg-cyan-100 text-cyan-600",
+    gradient: "from-cyan-50 to-cyan-100"
+  }
+];
+
+const PlatformOverview: React.FC = () => {
   return (
-    <section className="py-20 md:py-24 bg-background" data-testid="platform-overview-section">
+    <section className="relative py-24 bg-gradient-to-b from-background via-blue-50/50 to-background overflow-hidden">
       <div className="container mx-auto px-6 sm:px-8 lg:px-10">
         <div className="text-center mb-16 ios-fade-in">
           <h2 className="text-3xl md:text-5xl ios-title text-foreground mb-6 leading-tight" data-testid="text-section-title">
-            Everything You Need to{" "}
-            <span className="text-primary">Succeed</span>
+            <span className="text-primary">{PLATFORM_TITLE}</span>
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto ios-body leading-relaxed" data-testid="text-section-subtitle">
-            From exam preparation to career guidance, NurseEd Pakistan provides all the tools and resources you need for nursing success.
+            {PLATFORM_SUBTITLE}
           </p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {features.map((feature, index) => (
             <Link
-              key={index}
+              key={feature.title}
               href={feature.link}
               className="block ios-card p-8 group cursor-pointer ios-slide-up"
               style={{ animationDelay: `${index * 150}ms` }}
@@ -75,4 +78,6 @@ export default function PlatformOverview() {
       </div>
     </section>
   );
-}
+};
+
+export default React.memo(PlatformOverview);

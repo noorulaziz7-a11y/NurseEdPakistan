@@ -2,20 +2,20 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import MaterialCard from "@/components/cards/material-card";
-import { STUDY_MATERIAL_CATEGORIES } from "@/lib/constants";
-import type { StudyMaterial } from "@shared/schema";
+import LibraryCard from "@/components/cards/library-card";
+import { STUDY_LIBRARY_CATEGORIES } from "@/lib/constants";
+import type { StudyLibrary as Study } from "@shared/schema";
 
-export default function StudyMaterials() {
-  const [selectedCategory, setSelectedCategory] = useState("All Materials");
+export default function StudyLibrary() {
+  const [selectedCategory, setSelectedCategory] = useState("All Libraries");
 
-  const { data: materials, isLoading } = useQuery<StudyMaterial[]>({
-    queryKey: ["/api/study-materials", { category: selectedCategory }],
+  const { data: libraries, isLoading } = useQuery<Study[]>({
+    queryKey: ["/api/study-libraries", { category: selectedCategory }],
   });
 
-  const filteredMaterials = materials?.filter(material => {
-    if (selectedCategory === "All Materials") return true;
-    return material.category === selectedCategory;
+  const filteredLibraries = libraries?.filter(library => {
+    if (selectedCategory === "All Libraries") return true;
+    return library.category === selectedCategory;
   }) || [];
 
   return (
@@ -25,7 +25,7 @@ export default function StudyMaterials() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-6" data-testid="text-materials-title">
-              Study Materials Library
+              Study Library
             </h1>
             <p className="text-xl text-accent-foreground/90 mb-8" data-testid="text-materials-subtitle">
               Access comprehensive study resources including textbooks, reference guides, and practice materials organized by subject and expertise level.
@@ -37,7 +37,7 @@ export default function StudyMaterials() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Categories Navigation */}
         <div className="flex flex-wrap justify-center gap-4 mb-8">
-          {STUDY_MATERIAL_CATEGORIES.map((category) => (
+          {STUDY_LIBRARY_CATEGORIES.map((category) => (
             <Button
               key={category}
               variant={selectedCategory === category ? "default" : "outline"}
@@ -57,8 +57,8 @@ export default function StudyMaterials() {
         {/* Materials Count */}
         <div className="mb-6">
           <p className="text-muted-foreground" data-testid="text-materials-count">
-            {isLoading ? "Loading..." : `${filteredMaterials.length} materials available`}
-            {selectedCategory !== "All Materials" && ` in ${selectedCategory}`}
+            {isLoading ? "Loading..." : `${filteredLibraries.length} libraries available`}
+            {selectedCategory !== "All Libraries" && ` in ${selectedCategory}`}
           </p>
         </div>
 
@@ -88,24 +88,24 @@ export default function StudyMaterials() {
               </Card>
             ))}
           </div>
-        ) : filteredMaterials.length === 0 ? (
+        ) : filteredLibraries.length === 0 ? (
           <Card className="p-8">
             <CardContent className="text-center">
-              <h3 className="text-xl font-semibold mb-4" data-testid="text-no-materials">
-                No materials found
+              <h3 className="text-xl font-semibold mb-4" data-testid="text-no-libraries">
+                No libraries found
               </h3>
               <p className="text-muted-foreground mb-4">
-                {selectedCategory === "All Materials"
-                  ? "No study materials are currently available."
-                  : `No materials found in the ${selectedCategory} category.`}
+                {selectedCategory === "All Libraries"
+                  ? "No study libraries are currently available."
+                  : `No libraries found in the ${selectedCategory} category.`}
               </p>
-              {selectedCategory !== "All Materials" && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => setSelectedCategory("All Materials")}
-                  data-testid="button-show-all-materials"
+              {selectedCategory !== "All Libraries" && (
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedCategory("All Libraries")}
+                  data-testid="button-show-all-libraries"
                 >
-                  Show All Materials
+                  Show All Libraries
                 </Button>
               )}
             </CardContent>
@@ -113,20 +113,20 @@ export default function StudyMaterials() {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {filteredMaterials.map((material) => (
-                <MaterialCard key={material.id} material={material} />
+              {filteredLibraries.map((library) => (
+                <LibraryCard key={library.id} library={library} />
               ))}
             </div>
 
             {/* Load More Button */}
-            {filteredMaterials.length >= 9 && (
+            {filteredLibraries.length >= 9 && (
               <div className="text-center">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="lg"
-                  data-testid="button-load-more-materials"
+                  data-testid="button-load-more-libraries"
                 >
-                  Load More Materials
+                  Load More Libraries
                 </Button>
               </div>
             )}

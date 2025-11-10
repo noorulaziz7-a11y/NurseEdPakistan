@@ -1,38 +1,42 @@
+import React from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
 
-interface MobileMenuProps {
-  isOpen: boolean;
+export default function MobileMenu({
+  open,
+  onClose,
+}: {
+  open: boolean;
   onClose: () => void;
-  navLinks: Array<{ href: string; label: string }>;
-  isActiveLink: (href: string) => boolean;
-}
-
-export default function MobileMenu({ isOpen, onClose, navLinks, isActiveLink }: MobileMenuProps) {
-  if (!isOpen) return null;
+}) {
+  const navLinks = [
+    { name: "Home", path: "/" },
+    { name: "Colleges", path: "/colleges" },
+    { name: "Courses", path: "/courses" },
+    { name: "Exam Prep", path: "/exam-prep" },
+    { name: "Study Library", path: "/study-library" },
+    { name: "Contact", path: "/contact" },
+  ];
 
   return (
-    <div className="md:hidden border-t border-border mt-4 pt-4 pb-4" data-testid="mobile-menu">
-      <div className="flex flex-col space-y-4">
-        {navLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={onClose}
-            className={`transition-colors font-medium ${
-              isActiveLink(link.href)
-                ? "text-foreground"
-                : "text-muted-foreground hover:text-primary"
-            }`}
-            data-testid={`mobile-nav-link-${link.label.toLowerCase().replace(" ", "-")}`}
-          >
-            {link.label}
-          </Link>
-        ))}
-        <Button className="w-full" onClick={onClose} data-testid="mobile-button-signin">
-          Sign In
-        </Button>
-      </div>
-    </div>
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent side="right" className="w-[250px]">
+        <SheetHeader>
+          <SheetTitle className="text-lg font-semibold">Menu</SheetTitle>
+        </SheetHeader>
+        <nav className="mt-6 flex flex-col gap-4">
+          {navLinks.map((link) => (
+            <Link key={link.path} href={link.path}>
+              <span
+                onClick={onClose}
+                className="block text-base font-medium text-muted-foreground hover:text-primary transition"
+              >
+                {link.name}
+              </span>
+            </Link>
+          ))}
+        </nav>
+      </SheetContent>
+    </Sheet>
   );
 }

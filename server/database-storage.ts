@@ -1,5 +1,6 @@
 import {
   users,
+  exams,
   examQuestions,
   colleges,
   studyMaterials,
@@ -45,6 +46,11 @@ export class DatabaseStorage {
 
   async updateUserLastLogin(userId: string): Promise<void> {
     await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
+  }
+
+  // ---------------- EXAMS ----------------
+  async getAllExams(): Promise<any[]> {
+    return await db.select().from(exams);
   }
 
   // ---------------- EXAM QUESTIONS ----------------
