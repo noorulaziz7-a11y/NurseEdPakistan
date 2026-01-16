@@ -1,330 +1,396 @@
-import type { Express, Request, Response } from "express";
-import { storage } from "./storage";
-import { insertUserSchema, loginUserSchema } from "@shared/schema";
+import express, { Request, Response } from "express";
+import { storage, MemStorage } from "./storage";
 import { AuthService } from "./auth";
 
-export async function registerRoutes(app: Express): Promise<void> {
-  // ---------------- AUTH ROUTES ----------------
-  app.post("/api/auth/register", async (req: Request, res: Response, next) => {
-    try {
-      const userData = insertUserSchema.parse(req.body);
-      const user = await AuthService.register(userData);
+const router = express.Router();
 
-      req.session.regenerate((err: any) => {
-        if (err) return next(err);
-        req.session.userId = user.id;
-        req.session.save((err: any) => {
-          if (err) return next(err);
-          res.status(201).json({ user, message: "Registration successful" });
-        });
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Registration failed";
-      res.status(400).json({ message });
-    }
+// UTILITY — normalize exam names
+const normalizeExam = (str: string) =>
+  str.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const fallbackStorage =
+  process.env.NODE_ENV !== "production" ? new MemStorage() : null;
+
+// ---------------- USERS ----------------
+
+router.get("/api/users/:id", async (req: Request, res: Response) => {
+  try {
+    const user = await storage.getUser(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+// ---------------- AUTH ----------------
+
+const sanitizeUser = (user: any) => {
+  const { password, ...safeUser } = user || {};
+  return safeUser;
+};
+
+router.post("/api/auth/register", async (req: Request, res: Response) => {
+  try {
+    const user = await AuthService.register(req.body);
+    req.session.userId = user.id;
+    res.json({ user: sanitizeUser(user) });
+  } catch (error: any) {
+    res.status(400).json({ message: error?.message || "Registration failed" });
+  }
+});
+
+router.post("/api/auth/login", async (req: Request, res: Response) => {
+  try {
+    const user = await AuthService.login(req.body);
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+    req.session.userId = user.id;
+    res.json({ user: sanitizeUser(user) });
+  } catch (error: any) {
+    res.status(400).json({ message: error?.message || "Login failed" });
+  }
+});
+
+router.get("/api/auth/me", async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.json({ user: null });
+    const user = await storage.getUser(userId);
+    if (!user) return res.json({ user: null });
+    res.json({ user: sanitizeUser(user) });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+router.post("/api/auth/logout", async (req: Request, res: Response) => {
+  req.session.destroy(() => {
+    res.json({ success: true });
   });
+});
 
-  app.post("/api/auth/login", async (req: Request, res: Response, next) => {
+// ---------------- EXAMS ----------------
+
+// Get all exams
+router.get("/api/exams", async (_req: Request, res: Response) => {
+  try {
+    const exams = await storage.getAllExams();
+    res.json(exams);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+// Get exam by ID
+router.get("/api/exams/:id", async (req: Request, res: Response) => {
+  try {
+    const exams = await storage.getAllExams();
+    const exam = exams.find((e) => e.id.toString() === req.params.id);
+    if (!exam) return res.status(404).json({ message: "Exam not found" });
+    res.json(exam);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+// ---------------- MCQs / Exam Questions ----------------
+
+// Accept both /api/exams/:examType/questions and /api/exams/:examId/questions
+router.get(
+  ["/api/exams/:examType/questions", "/api/exams/:examId/questions"],
+  async (req: Request, res: Response) => {
     try {
-      const loginData = loginUserSchema.parse(req.body);
-      const user = await AuthService.login(loginData);
+      const raw = req.query || {};
 
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
+      const subject = raw.category?.toString() || raw.subject?.toString();
+      const system = raw.system?.toString();
+      const difficulty = raw.difficulty?.toString();
+      const limit = raw.limit ? parseInt(raw.limit.toString()) : undefined;
+
+      // Accept either :examType or :examId
+      const paramValue =
+        (req.params as any).examType || (req.params as any).examId;
+
+      if (!paramValue) {
+        return res
+          .status(400)
+          .json({ message: "Exam identifier missing in URL" });
       }
 
-      req.session.regenerate((err: any) => {
-        if (err) return next(err);
-        req.session.userId = user.id;
-        req.session.save((err: any) => {
-          if (err) return next(err);
-          res.json({ user, message: "Login successful" });
-        });
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Login failed";
-      res.status(401).json({ message });
-    }
-  });
+      // Normalize exam name so "NCLEX", "nclex-rn", "nclexrn" all match
+      const normalizedExam = normalizeExam(paramValue);
 
-  app.post("/api/auth/logout", async (req: Request, res: Response) => {
-    req.session.destroy((err: any) => {
-      if (err) return res.status(500).json({ message: "Logout failed" });
-      res.clearCookie("connect.sid");
-      res.json({ message: "Logout successful" });
-    });
-  });
+      const baseFilters = { subject, system, difficulty, limit };
+      let questions = await storage.getExamQuestions(normalizedExam, baseFilters);
 
-  app.get("/api/auth/me", async (req: Request, res: Response) => {
-    try {
-      if (!req.session?.userId) {
-        return res.status(401).json({ message: "Not authenticated" });
+      // If strict filters yield no results, progressively relax them to avoid empty quizzes.
+      if (questions.length === 0 && (subject || system || difficulty)) {
+        const relaxations = [
+          { subject, difficulty, limit }, // drop system first
+          { difficulty, limit },          // drop subject too
+          { limit },                      // drop difficulty too
+        ];
+
+        for (const filters of relaxations) {
+          questions = await storage.getExamQuestions(normalizedExam, filters);
+          if (questions.length > 0) break;
+        }
       }
 
-      const user = await AuthService.getCurrentUser(
-        parseInt(req.session.userId, 10)
-      );
-      if (!user) {
-        return res.status(401).json({ message: "User not found" });
+      // Fallback: If no questions found via ID, try looking up by Exam Name (legacy data support)
+      if (questions.length === 0) {
+        const exams = await storage.getAllExams();
+        const exam = exams.find((e) => normalizeExam(e.id) === normalizedExam);
+
+        if (exam && exam.name) {
+          console.log(`No questions found for ID ${normalizedExam}, trying name: ${exam.name}`);
+          let questionsByName = await storage.getExamQuestions(exam.name, baseFilters);
+          if (questionsByName.length === 0 && (subject || system || difficulty)) {
+            const relaxations = [
+              { subject, difficulty, limit },
+              { difficulty, limit },
+              { limit },
+            ];
+            for (const filters of relaxations) {
+              questionsByName = await storage.getExamQuestions(exam.name, filters);
+              if (questionsByName.length > 0) break;
+            }
+          }
+          if (questionsByName.length > 0) {
+            questions = questionsByName;
+          }
+        }
       }
 
-      res.json({ user });
-    } catch {
-      res.status(500).json({ message: "Failed to get user" });
-    }
-  });
+      // Dev fallback: if DB is empty, serve seeded in-memory questions
+      if (questions.length === 0 && fallbackStorage) {
+        let fallbackQuestions = await fallbackStorage.getExamQuestions(
+          normalizedExam,
+          baseFilters
+        );
+        if (fallbackQuestions.length === 0 && (subject || system || difficulty)) {
+          const relaxations = [
+            { subject, difficulty, limit },
+            { difficulty, limit },
+            { limit },
+          ];
+          for (const filters of relaxations) {
+            fallbackQuestions = await fallbackStorage.getExamQuestions(
+              normalizedExam,
+              filters
+            );
+            if (fallbackQuestions.length > 0) break;
+          }
+        }
+        if (fallbackQuestions.length === 0) {
+          const fallbackExams = await fallbackStorage.getAllExams();
+          const fallbackExam = fallbackExams.find(
+            (e) => normalizeExam(e.id) === normalizedExam
+          );
+          if (fallbackExam?.name) {
+            fallbackQuestions = await fallbackStorage.getExamQuestions(
+              fallbackExam.name,
+              baseFilters
+            );
+            if (fallbackQuestions.length === 0 && (subject || system || difficulty)) {
+              const relaxations = [
+                { subject, difficulty, limit },
+                { difficulty, limit },
+                { limit },
+              ];
+              for (const filters of relaxations) {
+                fallbackQuestions = await fallbackStorage.getExamQuestions(
+                  fallbackExam.name,
+                  filters
+                );
+                if (fallbackQuestions.length > 0) break;
+              }
+            }
+          }
+        }
+        if (fallbackQuestions.length > 0) {
+          questions = fallbackQuestions;
+        }
+      }
 
-  // ---------------- COLLEGES ROUTE ----------------
-  app.get("/api/colleges", async (req: Request, res: Response) => {
-    try {
-      console.log("📡 Fetching colleges with filters:", req.query);
-      const { city, program } = req.query;
-
-      const filters = {
-        city: city as string | undefined,
-        programs: program as string | undefined,
-      };
-
-      const colleges = await storage.getColleges(filters);
-      console.log(`✅ Found ${colleges.length} colleges`);
-      res.json(colleges);
-    } catch (error) {
-      console.error("❌ Error fetching colleges:", error);
-      res.status(500).json({ message: "Failed to fetch colleges" });
-    }
-  });
-
-  // ---------------- EXAM QUESTIONS ROUTE ----------------
-  app.get("/api/exam-questions/:examType", async (req: Request, res: Response) => {
-    try {
-      const { examType } = req.params;
-      console.log(`📡 Fetching questions for exam type: ${examType}`);
-      const questions = await storage.getExamQuestions(examType);
-      console.log(`✅ Found ${questions.length} questions for ${examType}`);
       res.json(questions);
     } catch (error) {
-      console.error(`❌ Error fetching questions for ${req.params.examType}:`, error);
-      res.status(500).json({ message: "Failed to fetch exam questions" });
+      console.error("Failed to fetch exam questions:", error);
+      res.status(500).json({ message: "Server error", error });
     }
-  });
+  }
+);
 
-  // ---------------- EXAMS ROUTE ---------------- 
-  app.get("/api/exams", async (_req: Request, res: Response) => {
-    try {
-      const exams = [
-        { id: "nclex", name: "NCLEX-RN", description: "US/Canada licensure exam", badge: "Popular", badgeColor: "bg-blue-100 text-blue-700", region: "North America" },
-        { id: "snle", name: "SNLE", description: "Saudi licensure exam", badge: "KSA", badgeColor: "bg-green-100 text-green-700", region: "Middle East" },
-        { id: "moh", name: "MOH", description: "UAE Ministry of Health exam", badge: "UAE", badgeColor: "bg-yellow-100 text-yellow-700", region: "Middle East" },
-        { id: "dha", name: "DHA", description: "Dubai Health Authority exam", badge: "Dubai", badgeColor: "bg-red-100 text-red-700", region: "Middle East" },
-        { id: "haad", name: "HAAD", description: "Abu Dhabi DOH exam", badge: "Abu Dhabi", badgeColor: "bg-purple-100 text-purple-700", region: "Middle East" },
-        { id: "ielts", name: "IELTS", description: "Language proficiency", badge: "Language", badgeColor: "bg-pink-100 text-pink-700", region: "Global" },
-      ];
-      res.json(exams);
-    } catch (error) {
-      console.error("❌ Error fetching exams:", error);
-      res.status(500).json({ message: "Failed to fetch exams" });
-    }
-  });
+// Legacy practice-test endpoint (used by /practice-test/:examType)
+router.get("/api/exam-questions/:examType", async (req: Request, res: Response) => {
+  try {
+    const normalizedExam = normalizeExam(req.params.examType);
+    const questions = await storage.getExamQuestions(normalizedExam);
+    res.json(questions);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
 
-  // ---------------- QUIZ ROUTES ---------------- 
-  // Get quiz questions with filters
-  app.get("/api/quiz/questions", async (req: Request, res: Response) => {
-    try {
-      const { examType, difficulty, category, limit, moduleType } = req.query;
-      let questions = await storage.getExamQuestions(examType as string);
-      
-      // Filter by difficulty
-      if (difficulty) {
-        questions = questions.filter(q => q.difficulty === difficulty);
-      }
-      
-      // Filter by category
-      if (category) {
-        questions = questions.filter(q => q.category === category);
-      }
-      
-      // Filter by module type (for IELTS)
-      if (moduleType && examType === "ielts") {
-        // IELTS module filtering logic can be added here
-      }
-      
-      // Shuffle and limit
-      const shuffled = questions.sort(() => Math.random() - 0.5);
-      const limitNum = limit ? parseInt(limit as string) : shuffled.length;
-      const result = shuffled.slice(0, limitNum);
-      
-      res.json(result);
-    } catch (error) {
-      console.error("❌ Error fetching quiz questions:", error);
-      res.status(500).json({ message: "Failed to fetch quiz questions" });
-    }
-  });
+// Get single MCQ
+router.get("/api/questions/:id", async (req: Request, res: Response) => {
+  try {
+    const question = await storage.getExamQuestionById(req.params.id);
+    if (!question)
+      return res.status(404).json({ message: "Question not found" });
+    res.json(question);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
 
-  // Submit quiz result
-  app.post("/api/quiz/results", async (req: Request, res: Response) => {
-    try {
-      const userId = req.session?.userId;
-      const resultData = req.body;
-      
-      // In a real implementation, save to database
-      // For now, return success
-      res.json({ 
-        success: true, 
-        resultId: `result_${Date.now()}`,
-        message: "Quiz result saved successfully"
+// ---------------- DAILY CHALLENGE ----------------
+
+router.get("/api/daily-challenge/:examType", async (req: Request, res: Response) => {
+  try {
+    const normalizedExam = normalizeExam(req.params.examType);
+    const questions = await storage.getExamQuestions(normalizedExam, { limit: 1 });
+    if (questions.length === 0)
+      return res.status(404).json({ message: "No questions found" });
+    res.json(questions[0]);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+router.get("/api/daily-challenge/stats", async (_req: Request, res: Response) => {
+  res.json({ streak: 0, totalCompleted: 0, averageScore: 0 });
+});
+
+// ---------------- COLLEGES ----------------
+
+router.get("/api/colleges", async (req: Request, res: Response) => {
+  try {
+    const { city, type, programs } = req.query;
+    const colleges = await storage.getColleges({
+      city: city?.toString(),
+      type: type?.toString(),
+      programs: programs?.toString(),
+    });
+    res.json(colleges);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+// Get a college by ID
+router.get("/api/colleges/:id", async (req: Request, res: Response) => {
+  try {
+    const college = await storage.getCollegeById(req.params.id);
+    if (!college) return res.status(404).json({ message: "College not found" });
+    res.json(college);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+// ---------------- STUDY LIBRARY ----------------
+router.get("/api/study-libraries", async (req: Request, res: Response) => {
+  try {
+    const category = req.query.category?.toString();
+    const libraries = await storage.getStudyLibraries(category);
+    res.json(libraries);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+// ---------------- NEWS ----------------
+router.get("/api/news", async (req: Request, res: Response) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit.toString()) : undefined;
+    const featured =
+      req.query.featured !== undefined
+        ? req.query.featured?.toString() === "true"
+        : undefined;
+    const articles = await storage.getNewsArticles(limit, featured);
+    res.json(articles);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+// ---------------- PRACTICE TESTS ----------------
+router.get("/api/practice-tests", async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.json([]);
+    const tests = await storage.getPracticeTests(userId);
+    res.json(tests);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+router.post("/api/practice-tests", async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.userId || req.body?.userId || null;
+    const test = await storage.createPracticeTest({ ...req.body, userId });
+    res.json(test);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
+
+// ---------------- ANALYTICS ----------------
+router.get("/api/analytics", async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.json({
+        totalQuizzes: 0,
+        averageScore: 0,
+        totalTime: 0,
+        completionRate: 0,
+        performanceOverTime: [],
+        examBreakdown: [],
+        subjectPerformance: [],
+        weeklyActivity: [],
       });
-    } catch (error) {
-      console.error("❌ Error saving quiz result:", error);
-      res.status(500).json({ message: "Failed to save quiz result" });
     }
-  });
 
-  // Get user progress
-  app.get("/api/quiz/progress", async (req: Request, res: Response) => {
-    try {
-      const userId = req.session?.userId;
-      if (!userId) {
-        return res.json({ progress: null });
-      }
-      
-      // In a real implementation, fetch from database
-      res.json({ progress: null });
-    } catch (error) {
-      console.error("❌ Error fetching progress:", error);
-      res.status(500).json({ message: "Failed to fetch progress" });
-    }
-  });
+    const tests = await storage.getPracticeTests(userId);
+    const totalQuizzes = tests.length;
+    const averageScore =
+      totalQuizzes > 0
+        ? Math.round(tests.reduce((sum, t) => sum + (t.score || 0), 0) / totalQuizzes)
+        : 0;
+    const totalTime = tests.reduce((sum, t) => sum + (t.timeSpent || 0), 0);
+    const completionRate =
+      totalQuizzes > 0
+        ? Math.round(
+            (tests.filter((t) => (t.totalQuestions || 0) > 0).length / totalQuizzes) * 100
+          )
+        : 0;
 
-  // Get user results history
-  app.get("/api/quiz/results", async (req: Request, res: Response) => {
-    try {
-      const userId = req.session?.userId;
-      if (!userId) {
-        return res.json({ results: [] });
-      }
-      
-      // In a real implementation, fetch from database
-      res.json({ results: [] });
-    } catch (error) {
-      console.error("❌ Error fetching results:", error);
-      res.status(500).json({ message: "Failed to fetch results" });
-    }
-  });
+    res.json({
+      totalQuizzes,
+      averageScore,
+      totalTime,
+      completionRate,
+      performanceOverTime: [],
+      examBreakdown: [],
+      subjectPerformance: [],
+      weeklyActivity: [],
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+});
 
-  // Check guest quiz limit
-  app.get("/api/quiz/guest-limit", async (req: Request, res: Response) => {
-    try {
-      const sessionId = req.query.sessionId as string;
-      // In a real implementation, check from database
-      const GUEST_QUIZ_LIMIT = 5;
-      res.json({ 
-        limit: GUEST_QUIZ_LIMIT,
-        remaining: GUEST_QUIZ_LIMIT,
-        canTakeQuiz: true
-      });
-    } catch (error) {
-      console.error("❌ Error checking guest limit:", error);
-      res.status(500).json({ message: "Failed to check guest limit" });
-    }
-  });
+// ---------------- LEADERBOARD ----------------
+router.get("/api/leaderboard", async (_req: Request, res: Response) => {
+  res.json([]);
+});
 
-  // ---------------- LEADERBOARD ROUTES ---------------- 
-  app.get("/api/leaderboard", async (req: Request, res: Response) => {
-    try {
-      const { examType, period } = req.query;
-      // Mock leaderboard data - in real app, fetch from database
-      const leaderboard = [
-        { rank: 1, username: "NursePro2024", score: 98, examType: "NCLEX", completedAt: new Date().toISOString() },
-        { rank: 2, username: "StudyMaster", score: 95, examType: "NCLEX", completedAt: new Date().toISOString() },
-        { rank: 3, username: "ExamChamp", score: 93, examType: "MOH", completedAt: new Date().toISOString() },
-        { rank: 4, username: "NursingStar", score: 91, examType: "DHA", completedAt: new Date().toISOString() },
-        { rank: 5, username: "TopPerformer", score: 89, examType: "SNLE", completedAt: new Date().toISOString() },
-      ];
-      res.json(leaderboard);
-    } catch (error) {
-      console.error("❌ Error fetching leaderboard:", error);
-      res.status(500).json({ message: "Failed to fetch leaderboard" });
-    }
-  });
+// ---------------- IELTS PROGRESS ----------------
+router.get("/api/ielts/progress", async (_req: Request, res: Response) => {
+  res.json(null);
+});
 
-  // ---------------- DAILY CHALLENGE ROUTES ---------------- 
-  app.get("/api/daily-challenge", async (req: Request, res: Response) => {
-    try {
-      const { date } = req.query;
-      // Mock daily challenge - in real app, fetch from database
-      const challenge = {
-        id: `challenge-${date}`,
-        date: date || new Date().toISOString().split("T")[0],
-        examType: "NCLEX",
-        questionCount: 20,
-        difficulty: "medium",
-        timeLimit: 30,
-        completed: false,
-        participants: 1250,
-        topScore: 98,
-      };
-      res.json(challenge);
-    } catch (error) {
-      console.error("❌ Error fetching daily challenge:", error);
-      res.status(500).json({ message: "Failed to fetch daily challenge" });
-    }
-  });
-
-  app.get("/api/daily-challenge/stats", async (req: Request, res: Response) => {
-    try {
-      // Mock stats - in real app, fetch from database
-      res.json({
-        streak: 7,
-        totalCompleted: 45,
-        averageScore: 85,
-      });
-    } catch (error) {
-      console.error("❌ Error fetching challenge stats:", error);
-      res.status(500).json({ message: "Failed to fetch challenge stats" });
-    }
-  });
-
-  // ---------------- ANALYTICS ROUTES ---------------- 
-  app.get("/api/analytics", async (req: Request, res: Response) => {
-    try {
-      const userId = req.session?.userId;
-      // Mock analytics data - in real app, fetch from database
-      res.json({
-        totalQuizzes: 125,
-        averageScore: 87,
-        totalTime: 3420, // minutes
-        completionRate: 92,
-        performanceOverTime: [
-          { date: "Week 1", score: 75, average: 70 },
-          { date: "Week 2", score: 80, average: 72 },
-          { date: "Week 3", score: 85, average: 75 },
-          { date: "Week 4", score: 90, average: 78 },
-        ],
-        examBreakdown: [
-          { exam: "NCLEX", score: 88, attempts: 45 },
-          { exam: "MOH", score: 85, attempts: 30 },
-          { exam: "DHA", score: 90, attempts: 25 },
-        ],
-        subjectPerformance: [
-          { name: "Medical-Surgical", value: 35 },
-          { name: "Pediatrics", value: 25 },
-          { name: "Pharmacology", value: 20 },
-          { name: "Mental Health", value: 20 },
-        ],
-        weeklyActivity: [
-          { day: "Mon", quizzes: 5, time: 120 },
-          { day: "Tue", quizzes: 8, time: 180 },
-          { day: "Wed", quizzes: 6, time: 150 },
-          { day: "Thu", quizzes: 7, time: 165 },
-          { day: "Fri", quizzes: 4, time: 90 },
-          { day: "Sat", quizzes: 10, time: 240 },
-          { day: "Sun", quizzes: 3, time: 75 },
-        ],
-      });
-    } catch (error) {
-      console.error("❌ Error fetching analytics:", error);
-      res.status(500).json({ message: "Failed to fetch analytics" });
-    }
-  });
-}
+export const registerRoutes = router;

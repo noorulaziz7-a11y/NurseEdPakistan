@@ -10,7 +10,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, 
 
 export default function QuizResultPage() {
   const { examId } = useParams<{ examId: string }>();
-  const [searchParams] = new URLSearchParams(window.location.search);
+  const searchParams = new URLSearchParams(window.location.search);
   
   const score = parseInt(searchParams.get("score") || "0");
   const correct = parseInt(searchParams.get("correct") || "0");

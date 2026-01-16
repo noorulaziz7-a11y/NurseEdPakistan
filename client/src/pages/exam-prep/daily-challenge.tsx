@@ -17,7 +17,8 @@ import {
   Play,
   Flame,
   Award,
-  TrendingUp
+  TrendingUp,
+  Users
 } from "lucide-react";
 
 interface DailyChallenge {

@@ -10,7 +10,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { insertUserSchema, loginUserSchema, type InsertUser, type LoginUser } from "@shared/schema";
+import { insertUserSchema, loginUserSchema } from "@shared/browser";
+type InsertUser = z.infer<typeof insertUserSchema>;
+type LoginUser = z.infer<typeof loginUserSchema>;
 import { z } from "zod";
 import { UserPlus, LogIn, Eye, EyeOff } from "lucide-react";
 

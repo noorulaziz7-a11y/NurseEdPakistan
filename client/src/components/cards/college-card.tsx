@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { MapPin, Star, Phone, Mail, Globe } from "lucide-react";
-import type { College } from "@shared/schema";
+import type { College } from "@shared/browser";
 
 interface CollegeCardProps {
   college: College;

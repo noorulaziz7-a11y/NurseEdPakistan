@@ -31,8 +31,8 @@ export const AuthService = {
     return user;
   },
 
-  async getCurrentUser(userId: number): Promise<User | null> {
-    const user = await storage.getUserById(userId);
+  async getCurrentUser(userId: string): Promise<User | null> {
+    const user = await storage.getUser(userId);
     return user || null;
   },
 };

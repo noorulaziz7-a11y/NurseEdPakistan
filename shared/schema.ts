@@ -36,6 +36,7 @@ export const examQuestions = pgTable("exam_questions", {
   explanation: text("explanation").notNull(),
   difficulty: text("difficulty").notNull(), // beginner, intermediate, advanced
   category: text("category").notNull(),
+  system: text("system"),
 });
 
 /* ---------------- COLLEGES ---------------- */
@@ -55,7 +56,7 @@ export const colleges = pgTable("colleges", {
 });
 
 /* ---------------- STUDY MATERIALS (exam-prep) ---------------- */
-export const studyMaterials = pgTable("study_materials", {
+export const studyLibrary = pgTable("study_library", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   examType: text("exam_type").notNull(),
   title: text("title").notNull(),
@@ -70,21 +71,6 @@ export const studyMaterials = pgTable("study_materials", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-/* ---------------- STUDY LIBRARY (separate page) ---------------- */
-export const studyLibrary = pgTable("study_library", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(),
-  description: text("description"),
-  category: text("category").notNull(),
-  type: text("type").notNull(),
-  level: text("level").notNull(),
-  isPremium: boolean("is_premium").default(false),
-  fileUrl: text("file_url"),
-  pageCount: integer("page_count"),
-  duration: text("duration"),
-  rating: integer("rating"),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
 
 /* ---------------- NEWS ARTICLES ---------------- */
 export const newsArticles = pgTable("news_articles", {
@@ -193,10 +179,6 @@ export const insertCollegeSchema = createInsertSchema(colleges).omit({
   id: true,
 });
 
-export const insertStudyMaterialSchema = createInsertSchema(studyMaterials).omit({
-  id: true,
-  updatedAt: true,
-});
 
 export const insertStudyLibrarySchema = createInsertSchema(studyLibrary).omit({
   id: true,
@@ -224,8 +206,8 @@ export type InsertExamQuestion = z.infer<typeof insertExamQuestionSchema>;
 export type College = typeof colleges.$inferSelect;
 export type InsertCollege = z.infer<typeof insertCollegeSchema>;
 
-export type StudyMaterial = typeof studyMaterials.$inferSelect;
-export type InsertStudyMaterial = z.infer<typeof insertStudyMaterialSchema>;
+export type StudyMaterial = typeof studyLibrary.$inferSelect;
+export type InsertStudyMaterial = z.infer<typeof insertStudyLibrarySchema>;
 
 export type StudyLibrary = typeof studyLibrary.$inferSelect;
 export type InsertStudyLibrary = z.infer<typeof insertStudyLibrarySchema>;

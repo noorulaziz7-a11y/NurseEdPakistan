@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import type { User } from "@shared/schema";
+import type { User } from "@shared/browser";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {

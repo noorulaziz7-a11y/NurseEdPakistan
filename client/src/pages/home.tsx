@@ -569,19 +569,19 @@ export default function Home() {
                 <Link href="/exam-prep">
                   <Button
                     size="lg"
-                    className="bg-white text-blue-600 hover:bg-blue-50 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl px-8 py-6 text-lg font-semibold font-['Nunito',sans-serif]"
+                    className="group bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 shadow-lg hover:shadow-2xl transition-all duration-300 rounded-2xl px-8 py-6 text-lg font-semibold font-['Nunito',sans-serif] flex items-center"
                   >
                     Start Free Trial
-                    <ArrowRight className="ml-2 w-5 h-5" />
+                    <ArrowRight className="ml-2 w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                   </Button>
                 </Link>
                 <Link href="/study-library">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-2 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm rounded-xl px-8 py-6 text-lg font-semibold font-['Nunito',sans-serif]"
+                    className="group border-2 border-white/30 text-gray-700 hover:bg-white/10 backdrop-blur-sm rounded-xl px-8 py-6 text-lg font-semibold font-['Nunito',sans-serif]"
                   >
-                    <Play className="mr-2 w-5 h-5" />
+                    <Play className="mr-2 w-5 h-5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
                     Watch Demo
                   </Button>
                 </Link>

@@ -73,7 +73,7 @@ const server = http.createServer(app);
     // registerRoutes may set up API routes and middleware.
     // If your registerRoutes function returns a server instance, that's OK,
     // but we won't rely on it. We already created `server` above.
-    await registerRoutes(app);
+    app.use(registerRoutes);
 
     // central error handler:
     // - respond with JSON error message for API calls

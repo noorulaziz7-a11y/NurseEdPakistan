@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
-import type { NewsArticle } from "@shared/schema";
+import type { NewsArticle } from "@shared/browser";
 
 interface NewsCardProps {
   article: NewsArticle;

@@ -8,6 +8,20 @@
       "when": 1759560153227,
       "tag": "0000_third_valkyrie",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1762859553132,
+      "tag": "0001_old_colonel_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762923392159,
+      "tag": "0002_shocking_malcolm_colcord",
+      "breakpoints": true
     }
   ]
 }

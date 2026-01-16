@@ -164,15 +164,15 @@ const HeroSection = () => (
         className="mt-8 flex flex-wrap items-center justify-center gap-4 text-blue-100"
       >
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5" />
+          <CheckCircle2 className="w-5 h-5 stroke-green-500 fill-white" />
           <span className="font-medium">10,000+ Questions</span>
         </div>
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5" />
+          <CheckCircle2 className="w-5 h-5 stroke-green-500 fill-white" />
           <span className="font-medium">Expert Explanations</span>
         </div>
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5" />
+          <CheckCircle2 className="w-5 h-5 stroke-green-500 fill-white" />
           <span className="font-medium">Progress Tracking</span>
         </div>
       </motion.div>

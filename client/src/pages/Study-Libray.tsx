@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import LibraryCard from "@/components/cards/library-card";
 import { STUDY_LIBRARY_CATEGORIES } from "@/lib/constants";
-import type { StudyLibrary as Study } from "@shared/schema";
+import type { StudyLibrary as Study } from "@shared/browser";
 
 export default function StudyLibrary() {
   const [selectedCategory, setSelectedCategory] = useState("All Libraries");

@@ -30,8 +30,9 @@ export default function QuizPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const searchParams = new URLSearchParams(window.location.search);
-  
+
   const subjects = searchParams.get("subjects")?.split(",") || [];
+  const system = searchParams.get("system");
   const difficulty = searchParams.get("difficulty") || "intermediate";
   const questionCount = parseInt(searchParams.get("count") || "25");
 
@@ -45,17 +46,28 @@ export default function QuizPage() {
 
   // Fetch questions
   const { data: questions = [], isLoading } = useQuery<Question[]>({
-    queryKey: ["/api/quiz/questions", examId, difficulty, subjects.join(","), questionCount],
+    queryKey: [
+      "/api/exams",
+      examId,
+      {
+        difficulty,
+        subjects: subjects.join(","),
+        system,
+        count: questionCount,
+      },
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({
-        examType: examId || "",
         difficulty,
         limit: questionCount.toString(),
       });
       if (subjects.length > 0) {
         params.append("category", subjects[0]);
       }
-      const res = await fetch(`/api/quiz/questions?${params.toString()}`);
+      if (system) {
+        params.append("system", system);
+      }
+      const res = await fetch(`/api/exams/${examId}/questions?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch questions");
       return res.json();
     },
@@ -274,17 +286,16 @@ export default function QuizPage() {
                           >
                             <Label
                               htmlFor={`option-${idx}`}
-                              className={`flex items-center gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all ${
-                                showResult
+                              className={`flex items-center gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all ${showResult
                                   ? isCorrectOption
                                     ? "bg-green-50 border-green-500"
                                     : isSelected
-                                    ? "bg-red-50 border-red-500"
-                                    : ""
+                                      ? "bg-red-50 border-red-500"
+                                      : ""
                                   : isSelected
-                                  ? "bg-blue-50 border-blue-500"
-                                  : "bg-gray-50 border-gray-200 hover:border-gray-300"
-                              } ${showExplanation ? "pointer-events-none" : ""}`}
+                                    ? "bg-blue-50 border-blue-500"
+                                    : "bg-gray-50 border-gray-200 hover:border-gray-300"
+                                } ${showExplanation ? "pointer-events-none" : ""}`}
                             >
                               <RadioGroupItem
                                 value={option}

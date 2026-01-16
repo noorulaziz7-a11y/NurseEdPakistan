@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, Bookmark, CheckCircle, XCircle, ArrowLeft, ArrowRight } from "lucide-react";
 import { EXAM_CONFIGS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
-import type { ExamQuestion } from "@shared/schema";
+import type { ExamQuestion } from "@shared/browser";
 
 export default function PracticeTest() {
   const [, params] = useRoute("/practice-test/:examType");
@@ -294,7 +294,13 @@ export default function PracticeTest() {
                 className="space-y-4"
                 data-testid="radio-group-answers"
               >
-                {(currentQuestion.options as string[]).map((option, index) => {
+                {(
+                  Array.isArray(currentQuestion.options)
+                    ? currentQuestion.options
+                    : Object.values(currentQuestion.options || {}).filter(
+                        (option): option is string => typeof option === "string"
+                      )
+                ).map((option, index) => {
                   const label = String.fromCharCode(65 + index); // A, B, C, D
                   const isSelected = selectedAnswers[currentQuestionIndex] === option;
                   return (

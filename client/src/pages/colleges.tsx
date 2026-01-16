@@ -9,7 +9,7 @@ import { Search } from "lucide-react";
 import CollegeCard from "@/components/cards/college-card";
 import CollegeCardSkeleton from "@/components/skeleton/CollegeCardSkeleton";
 import { COLLEGE_CITIES, COLLEGE_PROGRAMS } from "@/lib/constants";
-import type { College } from "@shared/schema";
+import type { College } from "@shared/browser";
 
 export default function Colleges() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,7 +22,7 @@ export default function Colleges() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedCity !== "All Cities") params.append("city", selectedCity);
-      if (selectedProgram !== "All Programs") params.append("program", selectedProgram);
+      if (selectedProgram !== "All Programs") params.append("programs", selectedProgram);
 
       const res = await fetch(`/api/colleges?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch colleges");

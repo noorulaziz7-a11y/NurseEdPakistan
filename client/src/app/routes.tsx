@@ -37,6 +37,7 @@ import GuidePage from "@/pages/exam-prep/guide";
 // New pages
 import Dashboard from "@/pages/dashboard";
 import Contact from "@/pages/contact";
+import { lazy } from "@/components/lazy";
 
 export const routes = [
   // 🏠 Core
@@ -51,9 +52,9 @@ export const routes = [
   // 📘 Exam prep
   { path: "/exam-prep", component: ExamPrep },
   { path: "/exam-prep/dashboard", component: Dashboard },
-  { path: "/exam-prep/leaderboard", component: () => import("@/pages/exam-prep/leaderboard").then(m => m.default) },
-  { path: "/exam-prep/daily-challenge", component: () => import("@/pages/exam-prep/daily-challenge").then(m => m.default) },
-  { path: "/exam-prep/analytics", component: () => import("@/pages/exam-prep/analytics").then(m => m.default) },
+  { path: "/exam-prep/leaderboard", component: lazy(() => import("@/pages/exam-prep/leaderboard")) },
+  { path: "/exam-prep/daily-challenge", component: lazy(() => import("@/pages/exam-prep/daily-challenge")) },
+  { path: "/exam-prep/analytics", component: lazy(() => import("@/pages/exam-prep/analytics")) },
 
   // 🎧 IELTS
   { path: "/exam-prep/ielts", component: IELTSDashboard },

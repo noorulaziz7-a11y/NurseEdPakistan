@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { FileText, Book, Play, Download, Eye, Bookmark, Star } from "lucide-react";
-import type { StudyLibrary } from "@shared/schema";
+import type { StudyLibrary } from "@shared/browser";
 
 interface LibraryCardProps {
   library: StudyLibrary;
@@ -60,11 +60,13 @@ export default function LibraryCard({ library }: LibraryCardProps) {
           </h3>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
             <span data-testid={`text-library-type-${library.id}`}>
-              {library.type} {library.pageCount && `• ${library.pageCount} pages`} {library.duration && `• ${library.duration}`}
+              {library.type} {library.duration && `• ${library.duration}`}
             </span>
-            <span data-testid={`text-library-updated-${library.id}`}>
-              Updated: {new Date(library.updatedAt!).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-            </span>
+            {library.updatedAt && (
+              <span data-testid={`text-library-updated-${library.id}`}>
+                Updated: {new Date(library.updatedAt as string).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+              </span>
+            )}
           </div>
         </div>
       </div>

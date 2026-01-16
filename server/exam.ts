@@ -1,21 +1,39 @@
 // server/exam.ts
-import type { Request, Response } from "express";
+import { Router, type Request, type Response } from "express";
+import { studyMaterials } from "@shared/schema";
 
-export async function getExams(req: Request, res: Response) {
+export const examRouter = Router();
+
+// ✅ Get all available exams (for exam-prep cards)
+examRouter.get("/", async (_req: Request, res: Response) => {
   try {
-    // ✅ Always return static sample data for now
+    // Normally you'd fetch from DB — for now return static demo data:
     const exams = [
-      { id: 1, name: "NCLEX-RN", description: "U.S. licensing exam", badge: "RN", badgeColor: "bg-blue-500", progress: 45 },
-      { id: 2, name: "MOH", description: "Ministry of Health Exam (UAE)", badge: "MOH", badgeColor: "bg-green-500", progress: 23 },
-      { id: 3, name: "SNLE", description: "Saudi Nursing Licensing Exam", badge: "SNLE", badgeColor: "bg-yellow-500", progress: 78 },
-      { id: 4, name: "DHA", description: "Dubai Health Authority", badge: "DHA", badgeColor: "bg-purple-500", progress: 0 },
-      { id: 5, name: "HAAD", description: "Abu Dhabi Health Exam", badge: "HAAD", badgeColor: "bg-red-500", progress: 0 },
-      { id: 6, name: "IELTS", description: "International English Exam", badge: "IELTS", badgeColor: "bg-orange-500", progress: 0 },
+      { id: "nclex", name: "NCLEX-RN", badge: "Popular", badgeColor: "bg-blue-100 text-blue-700" },
+      { id: "snle", name: "SNLE", badge: "KSA", badgeColor: "bg-green-100 text-green-700" },
+      { id: "moh", name: "MOH", badge: "UAE", badgeColor: "bg-yellow-100 text-yellow-700" },
+      { id: "dha", name: "DHA", badge: "Dubai", badgeColor: "bg-red-100 text-red-700" },
+      { id: "haad", name: "HAAD", badge: "Abu Dhabi", badgeColor: "bg-purple-100 text-purple-700" },
+      { id: "ielts", name: "IELTS", badge: "Language", badgeColor: "bg-pink-100 text-pink-700" },
     ];
-
     res.json(exams);
-  } catch (error) {
-    console.error("❌ Failed to load exams:", error);
-    res.status(500).json({ message: "Failed to fetch exams" });
+  } catch (err) {
+    console.error("Error fetching exams:", err);
+    res.status(500).json({ message: "Failed to load exams" });
   }
-}
+});
+
+// ✅ Optional: fetch study materials by exam type
+examRouter.get("/:examType/materials", async (req: Request, res: Response) => {
+  const { examType } = req.params;
+  try {
+    const materials = await db
+      .select()
+      .from(studyMaterials)
+      .where(studyMaterials.examType.eq(examType));
+    res.json(materials);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to load study materials" });
+  }
+});

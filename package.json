@@ -26,7 +26,7 @@
     "dev:client": "vite --config vite.config.ts",
     "build": "npm run clean && npm run build:client && npm run build:server",
     "build:client": "vite build --config vite.config.ts",
-    "build:server": "esbuild server/index.ts --platform=node --bundle --external:./client/* --format=esm --outfile=dist/index.js",
+    "build:server": "esbuild server/index.ts --platform=node --bundle --external:./client/* --external:vite --external:lightningcss --external:@babel/preset-typescript --format=esm --outfile=dist/index.js",
     "start": "cross-env NODE_ENV=production node --enable-source-maps dist/index.js",
     "clean": "rimraf dist",
     "db:migrate": "drizzle-kit migrate",

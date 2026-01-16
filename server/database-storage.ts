@@ -3,7 +3,7 @@ import {
   exams,
   examQuestions,
   colleges,
-  studyMaterials,
+  studyLibrary,
   newsArticles,
   practiceTests,
   type User,
@@ -23,6 +23,22 @@ import { db } from "./db";
 import { eq, like, and, desc } from "drizzle-orm";
 
 export class DatabaseStorage {
+  // ---------------- EXAMS ----------------
+  async getAllExams(): Promise<any[]> {
+    return await db.select().from(exams);
+  }
+
+  private examQuestionSelect = {
+    id: examQuestions.id,
+    examType: examQuestions.examType,
+    question: examQuestions.question,
+    options: examQuestions.options,
+    correctAnswer: examQuestions.correctAnswer,
+    explanation: examQuestions.explanation,
+    difficulty: examQuestions.difficulty,
+    category: examQuestions.category,
+  };
+
   // ---------------- USERS ----------------
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -48,29 +64,44 @@ export class DatabaseStorage {
     await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
   }
 
-  // ---------------- EXAMS ----------------
-  async getAllExams(): Promise<any[]> {
-    return await db.select().from(exams);
-  }
-
   // ---------------- EXAM QUESTIONS ----------------
-  async getExamQuestions(examType: string, limit?: number): Promise<ExamQuestion[]> {
-    let query: any = db.select().from(examQuestions).where(eq(examQuestions.examType, examType));
+  async getExamQuestions(
+    examType: string,
+    filters?: { subject?: string; system?: string; difficulty?: string; limit?: number }
+  ): Promise<ExamQuestion[]> {
+    const conditions = [eq(examQuestions.examType, examType)];
 
-    if (limit && limit > 0) {
-      query = query.limit(limit);
+    if (filters?.subject) {
+      conditions.push(eq(examQuestions.category, filters.subject));
+    }
+
+    if (filters?.difficulty) {
+      conditions.push(eq(examQuestions.difficulty, filters.difficulty));
+    }
+
+    let query: any =
+      conditions.length === 1
+        ? db.select(this.examQuestionSelect).from(examQuestions).where(conditions[0])
+        : db.select(this.examQuestionSelect).from(examQuestions).where(and(...conditions));
+
+    if (filters?.limit && filters.limit > 0) {
+      query = query.limit(filters.limit);
     }
 
     return await query;
   }
 
   async getExamQuestionById(id: string): Promise<ExamQuestion | undefined> {
-    const [question] = await db.select().from(examQuestions).where(eq(examQuestions.id, id));
+    const [question] = await db
+      .select(this.examQuestionSelect)
+      .from(examQuestions)
+      .where(eq(examQuestions.id, id));
     return question;
   }
 
   async createExamQuestion(insertQuestion: InsertExamQuestion): Promise<ExamQuestion> {
-    const [question] = await db.insert(examQuestions).values(insertQuestion).returning();
+    const { system, ...safeInsert } = insertQuestion as InsertExamQuestion & { system?: unknown };
+    const [question] = await db.insert(examQuestions).values(safeInsert).returning();
     return question;
   }
 
@@ -108,26 +139,26 @@ export class DatabaseStorage {
     return college;
   }
 
-  // ---------------- STUDY MATERIALS ----------------
-  async getStudyMaterials(category?: string): Promise<StudyMaterial[]> {
-    let query: any = db.select().from(studyMaterials);
+  // ---------------- STUDY LIBRARY ----------------
+  async getStudyLibraries(category?: string): Promise<StudyMaterial[]> {
+    let query: any = db.select().from(studyLibrary);
 
-    if (category && category !== "All Materials") {
-      query = query.where(eq(studyMaterials.category, category));
+    if (category && category !== "All Materials" && category !== "All Libraries") {
+      query = query.where(eq(studyLibrary.category, category));
     }
 
-    query = query.orderBy(desc(studyMaterials.updatedAt));
+    query = query.orderBy(desc(studyLibrary.updatedAt));
 
     return await query;
   }
 
-  async getStudyMaterialById(id: string): Promise<StudyMaterial | undefined> {
-    const [material] = await db.select().from(studyMaterials).where(eq(studyMaterials.id, id));
+  async getStudyLibraryById(id: string): Promise<StudyMaterial | undefined> {
+    const [material] = await db.select().from(studyLibrary).where(eq(studyLibrary.id, id));
     return material;
   }
 
-  async createStudyMaterial(insertMaterial: InsertStudyMaterial): Promise<StudyMaterial> {
-    const [material] = await db.insert(studyMaterials).values(insertMaterial).returning();
+  async createStudyLibrary(insertMaterial: InsertStudyMaterial): Promise<StudyMaterial> {
+    const [material] = await db.insert(studyLibrary).values(insertMaterial).returning();
     return material;
   }
 

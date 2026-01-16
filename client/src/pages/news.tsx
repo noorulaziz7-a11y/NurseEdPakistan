@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import NewsCard from "@/components/cards/news-card";
-import type { NewsArticle } from "@shared/schema";
+import type { NewsArticle } from "@shared/browser";
 
 export default function News() {
   const { data: featuredArticles, isLoading: featuredLoading } = useQuery<NewsArticle[]>({
