@@ -14,12 +14,16 @@ export default function ExamNav({ examId }: Props) {
   ];
 
   return (
-    <nav className="flex gap-4 border-b pb-3">
+    <nav className="flex flex-wrap gap-6 border-b pb-3">
       {tabs.map(t => {
         const active = location === t.path || location === base;
         return (
           <Link key={t.path} href={t.path}>
-            <a className={`cursor-pointer pb-2 ${active ? "text-primary border-b-2 border-primary" : "text-muted-foreground"}`}>
+            <a
+              className={`cursor-pointer pb-2 transition-colors ${
+                active ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
               {t.label}
             </a>
           </Link>

@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
+import { Badge } from "@/shared/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
+import { Label } from "@/shared/ui/label";
+import { Progress } from "@/shared/ui/progress";
 import { Clock, Bookmark, CheckCircle, XCircle, ArrowLeft, ArrowRight } from "lucide-react";
 import { EXAM_CONFIGS } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";

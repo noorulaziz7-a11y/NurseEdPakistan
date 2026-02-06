@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Search } from "lucide-react";
 import CollegeCard from "@/components/cards/college-card";
 import CollegeCardSkeleton from "@/components/skeleton/CollegeCardSkeleton";
 import { COLLEGE_CITIES, COLLEGE_PROGRAMS } from "@/lib/constants";
+import { apiClient } from "@/shared/api/axios";
+import { endpoints } from "@/shared/api/endpoints";
 import type { College } from "@shared/browser";
 
 export default function Colleges() {
@@ -20,13 +22,12 @@ export default function Colleges() {
   const { data: colleges, isLoading, error } = useQuery<College[]>({
     queryKey: ["/api/colleges", selectedCity, selectedProgram],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (selectedCity !== "All Cities") params.append("city", selectedCity);
-      if (selectedProgram !== "All Programs") params.append("programs", selectedProgram);
+      const params: Record<string, string> = {};
+      if (selectedCity !== "All Cities") params.city = selectedCity;
+      if (selectedProgram !== "All Programs") params.programs = selectedProgram;
 
-      const res = await fetch(`/api/colleges?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch colleges");
-      return res.json();
+      const res = await apiClient.get<College[]>(endpoints.colleges, { params });
+      return res.data;
     },
   });
 

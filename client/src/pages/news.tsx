@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
 import NewsCard from "@/components/cards/news-card";
 import type { NewsArticle } from "@shared/browser";
 

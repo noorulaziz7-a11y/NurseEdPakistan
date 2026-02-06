@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
 import LibraryCard from "@/components/cards/library-card";
 import { STUDY_LIBRARY_CATEGORIES } from "@/lib/constants";
 import type { StudyLibrary as Study } from "@shared/browser";

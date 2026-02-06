@@ -1,9 +1,11 @@
 // src/pages/exam-prep/dashboard.tsx
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { ProgressBar } from "@/components/ui/progress-bar";
-import { Button } from "@/components/ui/button";
-import { Target, Clock, TrendingUp, CheckCircle } from "lucide-react";
+import DashboardLayout from "@/modules/dashboard/components/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Progress } from "@/shared/ui/progress";
+import { Button } from "@/shared/ui/button";
+import { Badge } from "@/shared/ui/badge";
+import { Target, Clock, TrendingUp, CheckCircle, ArrowUpRight } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -16,89 +18,131 @@ const mockData = [
   { name: "HAAD", score: 64 },
 ];
 
+const statCards = [
+  {
+    label: "Overall Accuracy",
+    value: "82%",
+    helper: "Last 30 days",
+    tone: "border-blue-500/60",
+    icon: Target,
+  },
+  {
+    label: "Weekly Progress",
+    value: "+15%",
+    helper: "Compared to last week",
+    tone: "border-emerald-500/60",
+    icon: TrendingUp,
+  },
+  {
+    label: "Study Time",
+    value: "36 hrs",
+    helper: "Total this month",
+    tone: "border-indigo-500/60",
+    icon: Clock,
+  },
+  {
+    label: "Quizzes Completed",
+    value: "214",
+    helper: "All time",
+    tone: "border-amber-500/60",
+    icon: CheckCircle,
+  },
+];
+
 export default function Dashboard() {
   return (
-    <div className="min-h-screen bg-background text-foreground py-16">
-      <div className="container mx-auto px-4 md:px-8">
-        <h1 className="text-3xl font-bold text-center mb-10">
-          📊 My Exam Dashboard
-        </h1>
-
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <Card className="text-center shadow-md border-t-4 border-blue-500">
-            <CardContent className="py-6">
-              <Target className="w-6 h-6 mx-auto text-blue-600 mb-2" />
-              <h3 className="text-2xl font-bold">82%</h3>
-              <p className="text-sm text-muted-foreground">Overall Accuracy</p>
-            </CardContent>
-          </Card>
-          <Card className="text-center shadow-md border-t-4 border-green-500">
-            <CardContent className="py-6">
-              <TrendingUp className="w-6 h-6 mx-auto text-green-600 mb-2" />
-              <h3 className="text-2xl font-bold">+15%</h3>
-              <p className="text-sm text-muted-foreground">Weekly Progress</p>
-            </CardContent>
-          </Card>
-          <Card className="text-center shadow-md border-t-4 border-indigo-500">
-            <CardContent className="py-6">
-              <Clock className="w-6 h-6 mx-auto text-indigo-600 mb-2" />
-              <h3 className="text-2xl font-bold">36 hrs</h3>
-              <p className="text-sm text-muted-foreground">Study Time</p>
-            </CardContent>
-          </Card>
-          <Card className="text-center shadow-md border-t-4 border-yellow-500">
-            <CardContent className="py-6">
-              <CheckCircle className="w-6 h-6 mx-auto text-yellow-600 mb-2" />
-              <h3 className="text-2xl font-bold">214</h3>
-              <p className="text-sm text-muted-foreground">Quizzes Completed</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Progress */}
-        <Card className="mb-12">
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-4">My Exam Progress</h2>
-            <div className="space-y-5">
-              {mockData.map((exam) => (
-                <div key={exam.name}>
-                  <div className="flex justify-between mb-1">
-                    <span className="font-medium">{exam.name}</span>
-                    <span className="text-muted-foreground">{exam.score}%</span>
-                  </div>
-                  <ProgressBar value={exam.score} />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Chart */}
-        <Card className="mb-12">
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-4">
-              Performance by Exam
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="score" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* CTA */}
-        <div className="text-center mt-12">
-          <Button className="px-8 py-3 text-base font-semibold">
+    <DashboardLayout
+      title="My Exam Dashboard"
+      description="Track performance, keep momentum, and discover your next study focus."
+      actions={
+        <>
+          <Button variant="secondary">Download report</Button>
+          <Button>
             Start New Quiz
+            <ArrowUpRight className="ml-2 h-4 w-4" />
           </Button>
-        </div>
+        </>
+      }
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        {statCards.map((stat) => (
+          <Card
+            key={stat.label}
+            className={`border ${stat.tone} shadow-sm bg-white/80 backdrop-blur`}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <h3 className="text-2xl font-semibold text-foreground mt-2">
+                    {stat.value}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-2">{stat.helper}</p>
+                </div>
+                <div className="h-12 w-12 rounded-2xl bg-muted/40 flex items-center justify-center">
+                  <stat.icon className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-    </div>
+
+      <div className="grid lg:grid-cols-[1.2fr_1fr] gap-6 mb-10">
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>My Exam Progress</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {mockData.map((exam) => (
+              <div key={exam.name} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{exam.name}</span>
+                  <Badge variant="secondary">{exam.score}%</Badge>
+                </div>
+                <Progress value={exam.score} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>Weekly Focus</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm text-muted-foreground">
+            <p>
+              Your strongest area is <span className="font-semibold text-foreground">NCLEX</span>.
+            </p>
+            <p>
+              Your weakest area is <span className="font-semibold text-foreground">DHA</span>.
+            </p>
+            <p>
+              Recommended: schedule two DHA practice blocks and review rationales.
+            </p>
+            <Button variant="outline" className="w-full">
+              View study plan
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>Performance by Exam</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={mockData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="score" fill="#2563eb" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </DashboardLayout>
   );
 }

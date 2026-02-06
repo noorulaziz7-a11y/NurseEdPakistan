@@ -1,9 +1,9 @@
 import { useRoute, Link } from "wouter";
 import { motion } from "framer-motion";
 import { exams } from "./exam-data";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
+import { Badge } from "@/shared/ui/badge";
 import {
   BookOpen,
   CheckCircle2,
@@ -14,9 +14,9 @@ import {
   ArrowLeft,
   FileText,
 } from "lucide-react";
-import Breadcrumbs from "@/components/exam-prep/Breadcrumbs";
-import SectionHeader from "@/components/exam-prep/SectionHeader";
-import { ExamPageSEO } from "@/components/exam-prep/ExamPageSEO";
+import Breadcrumbs from "@/modules/exams/components/Breadcrumbs";
+import SectionHeader from "@/modules/exams/components/SectionHeader";
+import { ExamPageSEO } from "@/modules/exams/components/ExamPageSEO";
 
 export default function GuidePage() {
   const [, params] = useRoute("/exam-prep/:examId/guide");

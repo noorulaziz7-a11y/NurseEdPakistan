@@ -1,4 +1,19 @@
-import { type User, type InsertUser, type ExamQuestion, type InsertExamQuestion, type College, type InsertCollege, type StudyLibrary, type InsertStudyLibrary, type NewsArticle, type InsertNewsArticle, type PracticeTest, type InsertPracticeTest } from "@shared/schema";
+import {
+  type User,
+  type InsertUser,
+  type ExamQuestion,
+  type InsertExamQuestion,
+  type College,
+  type InsertCollege,
+  type StudyLibrary,
+  type InsertStudyLibrary,
+  type NewsArticle,
+  type InsertNewsArticle,
+  type BlogPost,
+  type InsertBlogPost,
+  type PracticeTest,
+  type InsertPracticeTest,
+} from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -35,6 +50,14 @@ export interface IStorage {
   getNewsArticleById(id: string): Promise<NewsArticle | undefined>;
   createNewsArticle(article: InsertNewsArticle): Promise<NewsArticle>;
 
+  // Blog Posts
+  getBlogPosts(filters?: { status?: string; limit?: number }): Promise<BlogPost[]>;
+  getBlogPostBySlug(slug: string): Promise<BlogPost | undefined>;
+  getBlogPostById(id: string): Promise<BlogPost | undefined>;
+  createBlogPost(post: InsertBlogPost): Promise<BlogPost>;
+  updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost | undefined>;
+  deleteBlogPost(id: string): Promise<boolean>;
+
   // Practice Tests
   getPracticeTests(userId: string): Promise<PracticeTest[]>;
   createPracticeTest(test: InsertPracticeTest): Promise<PracticeTest>;
@@ -46,6 +69,7 @@ export class MemStorage implements IStorage {
   private colleges: Map<string, College>;
   private studyLibraries: Map<string, StudyLibrary>;
   private newsArticles: Map<string, NewsArticle>;
+  private blogPosts: Map<string, BlogPost>;
   private practiceTests: Map<string, PracticeTest>;
   private exams: any[];
 
@@ -55,10 +79,29 @@ export class MemStorage implements IStorage {
     this.colleges = new Map();
     this.studyLibraries = new Map();
     this.newsArticles = new Map();
+    this.blogPosts = new Map();
     this.practiceTests = new Map();
     this.exams = [];
     
     this.seedData();
+  }
+
+  private slugify(value: string) {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)+/g, "");
+  }
+
+  private ensureUniqueSlug(baseSlug: string) {
+    let slug = baseSlug || "post";
+    let counter = 2;
+    while (Array.from(this.blogPosts.values()).some((post) => post.slug === slug)) {
+      slug = `${baseSlug}-${counter}`;
+      counter += 1;
+    }
+    return slug;
   }
 
   private seedData() {
@@ -252,6 +295,21 @@ export class MemStorage implements IStorage {
     ];
 
     sampleNews.forEach(n => this.createNewsArticle(n));
+
+    // Seed blog posts
+    const sampleBlogPosts: InsertBlogPost[] = [
+      {
+        title: "How to Pass the NCLEX on Your First Try",
+        slug: "how-to-pass-the-nclex",
+        excerpt: "Proven strategies, study routines, and mindset tips to ace the NCLEX.",
+        content:
+          "# How to Pass the NCLEX\\n\\nStart early, practice daily, and focus on rationales.\\n\\n## Key Tips\\n- Build a weekly plan\\n- Use question banks\\n- Review weak areas",
+        status: "published",
+        tags: ["NCLEX", "Study Tips"],
+        publishedAt: new Date(),
+      },
+    ];
+    sampleBlogPosts.forEach((post) => this.createBlogPost(post));
   }
 
   // User methods
@@ -431,6 +489,84 @@ export class MemStorage implements IStorage {
     };
     this.newsArticles.set(id, article);
     return article;
+  }
+
+  // Blog Posts
+  async getBlogPosts(filters?: { status?: string; limit?: number }): Promise<BlogPost[]> {
+    let posts = Array.from(this.blogPosts.values());
+    if (filters?.status) {
+      posts = posts.filter((post) => post.status === filters.status);
+    }
+    posts.sort((a, b) => {
+      const aDate = a.publishedAt || a.updatedAt || a.createdAt || new Date(0);
+      const bDate = b.publishedAt || b.updatedAt || b.createdAt || new Date(0);
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
+    });
+    return filters?.limit ? posts.slice(0, filters.limit) : posts;
+  }
+
+  async getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+    return Array.from(this.blogPosts.values()).find((post) => post.slug === slug);
+  }
+
+  async getBlogPostById(id: string): Promise<BlogPost | undefined> {
+    return this.blogPosts.get(id);
+  }
+
+  async createBlogPost(insertPost: InsertBlogPost): Promise<BlogPost> {
+    const id = randomUUID();
+    const baseSlug = insertPost.slug || this.slugify(insertPost.title);
+    const slug = this.ensureUniqueSlug(baseSlug);
+    const now = new Date();
+    const post: BlogPost = {
+      ...insertPost,
+      id,
+      slug,
+      excerpt: insertPost.excerpt || null,
+      coverImageUrl: insertPost.coverImageUrl || null,
+      author: insertPost.author || null,
+      authorTitle: insertPost.authorTitle || null,
+      status: insertPost.status || "draft",
+      tags: insertPost.tags || [],
+      publishedAt:
+        insertPost.status === "published"
+          ? insertPost.publishedAt || now
+          : insertPost.publishedAt || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.blogPosts.set(id, post);
+    return post;
+  }
+
+  async updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost | undefined> {
+    const existing = this.blogPosts.get(id);
+    if (!existing) return undefined;
+    const baseSlug = post.slug || (post.title ? this.slugify(post.title) : existing.slug);
+    const slug =
+      baseSlug === existing.slug ? baseSlug : this.ensureUniqueSlug(baseSlug);
+    const updated: BlogPost = {
+      ...existing,
+      ...post,
+      slug,
+      excerpt: post.excerpt ?? existing.excerpt,
+      coverImageUrl: post.coverImageUrl ?? existing.coverImageUrl,
+      author: post.author ?? existing.author,
+      authorTitle: post.authorTitle ?? existing.authorTitle,
+      status: post.status ?? existing.status,
+      tags: post.tags ?? existing.tags,
+      publishedAt:
+        post.status === "published"
+          ? post.publishedAt || existing.publishedAt || new Date()
+          : post.publishedAt ?? existing.publishedAt,
+      updatedAt: new Date(),
+    };
+    this.blogPosts.set(id, updated);
+    return updated;
+  }
+
+  async deleteBlogPost(id: string): Promise<boolean> {
+    return this.blogPosts.delete(id);
   }
 
   // Practice Test methods

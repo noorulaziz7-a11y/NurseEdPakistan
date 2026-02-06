@@ -1,8 +1,8 @@
 // src/pages/exam-prep/ielts/index.tsx
 import { Link } from "wouter";
 import { BookOpen, Headphones, Mic, PenTool } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
 
 export default function IELTSOverview() {
   return (

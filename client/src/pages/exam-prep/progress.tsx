@@ -1,8 +1,8 @@
 import { useRoute, Link } from "wouter";
 import { motion } from "framer-motion";
 import { exams } from "./exam-data";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
 import {
   TrendingUp,
   Target,
@@ -12,11 +12,11 @@ import {
   Award,
   ArrowLeft,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import Breadcrumbs from "@/components/exam-prep/Breadcrumbs";
-import SectionHeader from "@/components/exam-prep/SectionHeader";
-import ProgressWidget from "@/components/exam-prep/ProgressWidget";
-import { ExamPageSEO } from "@/components/exam-prep/ExamPageSEO";
+import { Badge } from "@/shared/ui/badge";
+import Breadcrumbs from "@/modules/exams/components/Breadcrumbs";
+import SectionHeader from "@/modules/exams/components/SectionHeader";
+import ProgressWidget from "@/modules/exams/components/ProgressWidget";
+import { ExamPageSEO } from "@/modules/exams/components/ExamPageSEO";
 
 export default function ProgressPage() {
   const [, params] = useRoute("/exam-prep/:examId/progress");

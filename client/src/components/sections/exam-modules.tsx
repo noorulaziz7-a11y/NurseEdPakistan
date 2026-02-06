@@ -1,6 +1,6 @@
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import { Button } from "@/shared/ui/button";
+import { ProgressBar } from "@/shared/ui/progress-bar";
 import { CheckCircle } from "lucide-react";
 import { EXAM_CONFIGS } from "@/lib/constants";
 

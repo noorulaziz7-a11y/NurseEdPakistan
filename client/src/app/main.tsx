@@ -8,6 +8,7 @@ import "./index.css";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { registerServiceWorker } from "@/lib/offline";
+import { HelmetProvider } from "react-helmet-async";
 
 // 2. Use the shared QueryClient with default queryFn
 
@@ -28,9 +29,11 @@ createRoot(container).render(
     {/* 3. Wrap everything, including AuthProvider, with QueryClientProvider */}
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
+        <HelmetProvider>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </HelmetProvider>
       </AuthProvider>
     </QueryClientProvider>
   </React.StrictMode>

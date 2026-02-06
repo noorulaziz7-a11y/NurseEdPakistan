@@ -4,7 +4,11 @@ import "dotenv/config";
 import http from "http";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
+import { registerSeoRoutes } from "./seo";
+import { cacheMiddleware } from "./cache";
 // vite middleware is imported dynamically later to avoid linking issues during server-only runs
 
 const app = express();
@@ -15,8 +19,27 @@ if (app.get("env") === "development" && process.env.DATABASE_URL) {
   import("./seed").then(m => m.seedDatabase().catch(console.error));
 }
 
-app.use(express.json());
+app.use((req, res, next) => {
+  const isWebhook =
+    req.originalUrl.startsWith("/api/v1/subscriptions/webhook") ||
+    req.originalUrl.startsWith("/api/subscriptions/webhook");
+  if (isWebhook) {
+    return express.raw({ type: "application/json" })(req, res, next);
+  }
+  return express.json()(req, res, next);
+});
 app.use(express.urlencoded({ extended: false }));
+
+app.use(helmet());
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", apiLimiter);
+app.use("/api", cacheMiddleware({ ttlSeconds: 60 }));
 
 // Development CORS (allow frontend dev server origins)
 if (app.get("env") === "development") {
@@ -70,10 +93,11 @@ const server = http.createServer(app);
 
 (async () => {
   try {
+    registerSeoRoutes(app);
     // registerRoutes may set up API routes and middleware.
     // If your registerRoutes function returns a server instance, that's OK,
     // but we won't rely on it. We already created `server` above.
-    app.use(registerRoutes);
+    await registerRoutes(app);
 
     // central error handler:
     // - respond with JSON error message for API calls

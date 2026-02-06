@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/ui/button";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -15,7 +15,7 @@ import {
   Target,
   Zap,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/shared/ui/badge";
 
 // Background Pattern Component
 const BackgroundPattern = () => (

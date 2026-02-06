@@ -1,0 +1,2 @@
+﻿// colleges module exports
+export {};

@@ -1,7 +1,7 @@
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Badge } from "@/shared/ui/badge";
 import { motion } from "framer-motion";
 import {
   Star,
@@ -22,7 +22,7 @@ import {
   Play,
 } from "lucide-react";
 import Hero from "@/components/sections/hero";
-import PlatformOverview from "../components/sections/platform-overview";
+import PlatformOverview from "@/components/sections/platform-overview";
 import { useState } from "react";
 
 // SEO Metadata Component

@@ -1,7 +1,7 @@
 import { useParams, Link } from "wouter";
-import { exams } from "../../exam-data"; // Adjust the import path if necessary
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { exams } from "@/pages/exam-prep/exam-data";
+import { Button } from "@/shared/ui/button";
+import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from "@/shared/ui/card";
 import { ArrowLeft, Play } from "lucide-react";
 
 export default function QuizSetupPage() {

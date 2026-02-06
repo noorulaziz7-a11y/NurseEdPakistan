@@ -6,6 +6,8 @@ import {
   newsArticles,
   examQuestions as mcqs,
   ExamQuestion,
+  exams,
+  examSubjects,
 } from "@shared/schema";
 import { storage, MemStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -21,8 +23,7 @@ export async function seedDatabase() {
     } else {
       const existingQuestions = await db.select().from(mcqs).limit(1);
       if (existingQuestions.length > 0) {
-        console.log("Database already seeded, skipping...");
-        return;
+        console.log("MCQs already seeded, skipping MCQ seed...");
       }
     }
 
@@ -103,23 +104,129 @@ export async function seedDatabase() {
         console.log("✅ MCQs seeded successfully in memory!");
       }
     } else {
-      await db.insert(mcqs).values(sampleQuestions as ExamQuestion[]);
-      console.log("✅ MCQs seeded successfully!");
+      const existingQuestions = await db.select().from(mcqs).limit(1);
+      if (existingQuestions.length === 0) {
+        await db.insert(mcqs).values(sampleQuestions as ExamQuestion[]);
+        console.log("✅ MCQs seeded successfully!");
+      }
+    }
+
+    // ✅ Seed exams
+    try {
+      const existingExams = await db.select().from(exams).limit(1);
+      if (existingExams.length === 0) {
+        const seededExams = await db
+          .insert(exams)
+          .values([
+            {
+              name: "NCLEX-RN",
+              category: "Licensure",
+              description: "US/Canada licensure exam",
+              badge: "Popular",
+              badgeColor: "bg-blue-100 text-blue-700",
+              accessLevel: "free",
+            },
+            {
+              name: "SNLE",
+              category: "Licensure",
+              description: "Saudi licensure exam",
+              badge: "KSA",
+              badgeColor: "bg-green-100 text-green-700",
+              accessLevel: "free",
+            },
+            {
+              name: "MOH",
+              category: "Licensure",
+              description: "UAE Ministry of Health exam",
+              badge: "UAE",
+              badgeColor: "bg-yellow-100 text-yellow-700",
+              accessLevel: "free",
+            },
+            {
+              name: "DHA",
+              category: "Licensure",
+              description: "Dubai Health Authority exam",
+              badge: "Dubai",
+              badgeColor: "bg-red-100 text-red-700",
+              accessLevel: "free",
+            },
+            {
+              name: "HAAD",
+              category: "Licensure",
+              description: "Abu Dhabi DOH exam",
+              badge: "Abu Dhabi",
+              badgeColor: "bg-purple-100 text-purple-700",
+              accessLevel: "free",
+            },
+            {
+              name: "IELTS",
+              category: "Language",
+              description: "Language proficiency",
+              badge: "Language",
+              badgeColor: "bg-pink-100 text-pink-700",
+              accessLevel: "free",
+            },
+          ])
+          .returning();
+        console.log("✅ Exams seeded!");
+
+        const examByName = seededExams.reduce<Record<string, number>>((acc, exam) => {
+          acc[exam.name.toLowerCase()] = exam.id;
+          return acc;
+        }, {});
+
+        const subjectRows = [
+          "Medical-Surgical",
+          "Pediatrics",
+          "Pharmacology",
+          "Mental Health",
+          "Maternal-Newborn",
+          "Fundamentals",
+          "Critical Care",
+          "Community Health",
+          "Leadership",
+          "Emergency",
+          "Ethics",
+        ].flatMap((name, index) =>
+          Object.values(examByName).map((examId) => ({
+            examId,
+            name,
+            sortOrder: index,
+          }))
+        );
+
+        await db.insert(examSubjects).values(subjectRows);
+        console.log("✅ Exam subjects seeded!");
+      }
+    } catch (error) {
+      console.warn("Skipping exam seed due to schema mismatch:", error);
     }
 
     // ✅ Seed colleges
     const sampleColleges = [
       {
         name: "Aga Khan University School of Nursing",
-        country: "Pakistan",
         city: "Karachi",
-        website: "https://www.aku.edu/son",
+        province: "Sindh",
+        type: "University",
+        programs: ["BSN", "MSN"],
+        description: "Comprehensive nursing education with clinical excellence.",
+        contact: {
+          website: "https://www.aku.edu/son",
+          phone: "+92-21-111-911-911",
+        },
       },
       {
         name: "Lahore School of Nursing",
-        country: "Pakistan",
         city: "Lahore",
-        website: "https://www.lsn.edu.pk",
+        province: "Punjab",
+        type: "College",
+        programs: ["BSN", "Post-RN"],
+        description: "Career-focused nursing programs with modern labs.",
+        contact: {
+          website: "https://www.lsn.edu.pk",
+          phone: "+92-42-111-111-567",
+        },
       },
     ];
     await db.insert(colleges).values(sampleColleges);
@@ -163,6 +270,7 @@ export async function seedDatabase() {
     console.log("🎉 Database seeded successfully!");
   } catch (error) {
     console.error("❌ Failed toseed database:", error);
-    throw error;
+    // Do not crash the dev server if seeding fails.
+    return;
   }
 }

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/ui/button";
 import { MapPin, Star, Phone, Mail, Globe } from "lucide-react";
 import type { College } from "@shared/browser";
 

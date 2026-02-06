@@ -22,6 +22,62 @@
       "when": 1762923392159,
       "tag": "0002_shocking_malcolm_colcord",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769900000000,
+      "tag": "0003_mcq_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769901000000,
+      "tag": "0004_exam_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769902000000,
+      "tag": "0005_blog_posts",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1769903000000,
+      "tag": "0006_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1769904000000,
+      "tag": "0007_auth_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769905000000,
+      "tag": "0008_mcq_difficulty_levels",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769907000000,
+      "tag": "0009_mcq_classification",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1769908000000,
+      "tag": "0010_exams_columns",
+      "breakpoints": true
     }
   ]
 }

@@ -1,40 +1,30 @@
-// vite.config.ts
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
 import path from "path";
 import { fileURLToPath } from "url";
+import type { Express } from "express";
+import express from "express";
+import fs from "fs";
 
-// 🧩 Fix for __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default defineConfig({
-  plugins: [react()],
-  root: path.resolve(__dirname, "client"),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "client/src"),
-      "@shared": path.resolve(__dirname, "shared"),
-      "@assets": path.resolve(__dirname, "attached_assets"),
-    },
-  },
-  build: {
-    outDir: path.resolve(__dirname, "dist/public"),
-    emptyOutDir: true,
-  },
-  server: {
-    port: 5173,
-    open: true,
-    proxy: {
-      "/api": {
-        target: "http://localhost:5000",
-        changeOrigin: true,
-        secure: false,
-      },
-    },
-    fs: {
-      strict: false,
-    },
-  },
-  appType: "spa",
-});
+const clientDistPath = path.resolve(__dirname, "../dist/public");
+const indexHtmlPath = path.resolve(clientDistPath, "index.html");
+
+export function serveStatic(app: Express) {
+  if (!fs.existsSync(clientDistPath)) {
+    console.warn(
+      "Static assets not found. Run `npm run build` before `npm start`."
+    );
+    return;
+  }
+
+  app.use(express.static(clientDistPath));
+
+  app.get("*", (_req, res) => {
+    if (fs.existsSync(indexHtmlPath)) {
+      res.sendFile(indexHtmlPath);
+    } else {
+      res.status(404).send("index.html not found");
+    }
+  });
+}

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/ui/button";
 import { FileText, Book, Play, Download, Eye, Bookmark, Star } from "lucide-react";
 import type { StudyLibrary } from "@shared/browser";
 

@@ -1,8 +1,8 @@
 // ✅ src/pages/exam-prep/shared/StudyMaterialsPage.tsx
 import { Link, useParams } from "wouter"; // Import useParams
-import { exams } from "../exam-data";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { exams } from "@/pages/exam-prep/exam-data";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
 import { FileText, BookOpen, Video, ArrowLeft, ArrowRight, ClipboardList } from "lucide-react";
 
 export default function StudyMaterialsPage() {

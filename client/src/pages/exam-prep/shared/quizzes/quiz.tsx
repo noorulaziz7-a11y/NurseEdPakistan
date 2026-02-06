@@ -1,18 +1,20 @@
 // Modern iOS-inspired Quiz Page
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
+import { Progress } from "@/shared/ui/progress";
+import { Badge } from "@/shared/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
+import { Label } from "@/shared/ui/label";
 import { Clock, ArrowLeft, ArrowRight, Bookmark, CheckCircle2, XCircle, Lightbulb } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import AuthModal from "@/components/auth/AuthModal";
+import { getExams, getMCQs, type McqDifficulty, type McqSystem } from "@/modules/mcqs/services/mcqApi";
+import { exams as examDirectory } from "@/pages/exam-prep/exam-data";
 
 interface Question {
   id: string;
@@ -31,10 +33,33 @@ export default function QuizPage() {
   const { user } = useAuth();
   const searchParams = new URLSearchParams(window.location.search);
 
-  const subjects = searchParams.get("subjects")?.split(",") || [];
-  const system = searchParams.get("system");
-  const difficulty = searchParams.get("difficulty") || "intermediate";
+  const subjectId = searchParams.get("subjectId") || "";
+  const topicId = searchParams.get("topicId") || "";
+  const examIdFromQuery = Number(searchParams.get("examId") || "");
+  const legacyMode = searchParams.get("legacy") === "1";
+  const legacySubject = searchParams.get("subject") || "";
+  const system = searchParams.get("system") as McqSystem | null;
+  const difficulty = (searchParams.get("difficulty") || "moderate") as McqDifficulty;
   const questionCount = parseInt(searchParams.get("count") || "25");
+
+  const { data: apiExams = [] } = useQuery({
+    queryKey: ["/api/v1/exams"],
+    queryFn: getExams,
+  });
+
+  const resolvedExamId = useMemo(() => {
+    if (Number.isFinite(examIdFromQuery)) return examIdFromQuery;
+    const parsed = examId ? Number(examId) : NaN;
+    if (Number.isFinite(parsed)) return parsed;
+    const slugExam = examDirectory.find((exam) => exam.id === examId);
+    if (!slugExam) return null;
+    const match = apiExams.find((exam) => {
+      const apiName = exam?.name?.toLowerCase?.();
+      const slugName = slugExam.name.toLowerCase();
+      return apiName ? apiName === slugName : false;
+    });
+    return match?.id ?? null;
+  }, [examId, examIdFromQuery, apiExams]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
@@ -44,34 +69,110 @@ export default function QuizPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [guestQuizCount, setGuestQuizCount] = useState(0);
 
+  const shouldUseLegacy = legacyMode || !resolvedExamId;
+
   // Fetch questions
   const { data: questions = [], isLoading } = useQuery<Question[]>({
-    queryKey: [
-      "/api/exams",
-      examId,
-      {
-        difficulty,
-        subjects: subjects.join(","),
-        system,
-        count: questionCount,
-      },
-    ],
+    queryKey: shouldUseLegacy
+      ? [
+          "/api/exams",
+          examId,
+          {
+            subject: legacySubject || undefined,
+            difficulty,
+            system: system || undefined,
+            limit: questionCount,
+          },
+        ]
+      : [
+          "/api/v1/mcqs",
+          {
+            examId: resolvedExamId ?? undefined,
+            subjectId: subjectId || undefined,
+            topicId: topicId || undefined,
+            difficulty,
+            system: system || undefined,
+            page: 1,
+            pageSize: questionCount,
+          },
+        ],
     queryFn: async () => {
-      const params = new URLSearchParams({
+      if (shouldUseLegacy) {
+        if (!examId) return [];
+        const params = new URLSearchParams({
+          difficulty,
+          limit: questionCount.toString(),
+        });
+        if (legacySubject) {
+          params.append("category", legacySubject);
+        }
+        if (system) {
+          params.append("system", system);
+        }
+        const res = await fetch(`/api/exams/${examId}/questions?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed to fetch questions");
+        return res.json();
+      }
+
+      if (!resolvedExamId || !subjectId) {
+        return [];
+      }
+      const response = await getMCQs({
+        page: 1,
+        pageSize: questionCount,
+        examId: resolvedExamId,
+        subjectId: subjectId || undefined,
+        topicId: topicId || undefined,
         difficulty,
-        limit: questionCount.toString(),
+        system: system || undefined,
       });
-      if (subjects.length > 0) {
-        params.append("category", subjects[0]);
-      }
-      if (system) {
-        params.append("system", system);
-      }
-      const res = await fetch(`/api/exams/${examId}/questions?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch questions");
-      return res.json();
+
+      return response.data.map((mcq) => ({
+        id: mcq.id,
+        question: mcq.question,
+        options: (mcq.options || []).map((option) => option.optionText),
+        correctAnswer:
+          mcq.options?.find((option) => option.isCorrect)?.optionText || "",
+        explanation: mcq.explanation || "",
+        difficulty: mcq.difficulty,
+        category: subjectId || "",
+      }));
     },
   });
+
+  if (!resolvedExamId && !legacyMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="max-w-md w-full p-6 text-center">
+          <CardContent>
+            <h2 className="text-xl font-semibold mb-2">Exam not found</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Please go back and select a valid exam.
+            </p>
+            <Button onClick={() => setLocation("/exam-prep")}>Back to Exam Prep</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!subjectId && !legacyMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="max-w-md w-full p-6 text-center">
+          <CardContent>
+            <h2 className="text-xl font-semibold mb-2">Select a subject</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Choose a subject before starting your quiz.
+            </p>
+            <Button onClick={() => setLocation(`/exam-prep/${examId}/quizzes/setup`)}>
+              Back to Setup
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Timer
   useEffect(() => {

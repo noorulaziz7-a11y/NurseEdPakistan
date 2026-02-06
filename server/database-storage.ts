@@ -5,6 +5,7 @@ import {
   colleges,
   studyLibrary,
   newsArticles,
+  blogPosts,
   practiceTests,
   type User,
   type InsertUser,
@@ -16,6 +17,8 @@ import {
   type InsertStudyMaterial,
   type NewsArticle,
   type InsertNewsArticle,
+  type BlogPost,
+  type InsertBlogPost,
   type PracticeTest,
   type InsertPracticeTest,
 } from "@shared/schema";
@@ -186,6 +189,44 @@ export class DatabaseStorage {
   async createNewsArticle(insertArticle: InsertNewsArticle): Promise<NewsArticle> {
     const [article] = await db.insert(newsArticles).values(insertArticle).returning();
     return article;
+  }
+
+  // ---------------- BLOG POSTS ----------------
+  async getBlogPosts(filters?: { status?: string; limit?: number }): Promise<BlogPost[]> {
+    let query: any = db.select().from(blogPosts);
+    if (filters?.status) {
+      query = query.where(eq(blogPosts.status, filters.status));
+    }
+    if (filters?.limit && filters.limit > 0) {
+      query = query.limit(filters.limit);
+    }
+    query = query.orderBy(desc(blogPosts.publishedAt), desc(blogPosts.updatedAt));
+    return await query;
+  }
+
+  async getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug));
+    return post;
+  }
+
+  async getBlogPostById(id: string): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, id));
+    return post;
+  }
+
+  async createBlogPost(insertPost: InsertBlogPost): Promise<BlogPost> {
+    const [post] = await db.insert(blogPosts).values(insertPost).returning();
+    return post;
+  }
+
+  async updateBlogPost(id: string, post: Partial<InsertBlogPost>): Promise<BlogPost | undefined> {
+    const [updated] = await db.update(blogPosts).set(post).where(eq(blogPosts.id, id)).returning();
+    return updated;
+  }
+
+  async deleteBlogPost(id: string): Promise<boolean> {
+    const [deleted] = await db.delete(blogPosts).where(eq(blogPosts.id, id)).returning();
+    return Boolean(deleted);
   }
 
   // ---------------- PRACTICE TESTS ----------------

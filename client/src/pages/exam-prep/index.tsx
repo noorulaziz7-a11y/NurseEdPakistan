@@ -18,10 +18,10 @@ import {
 } from "lucide-react";
 import { ExamCardSkeleton } from "@/components/skeleton/ExamCardSkeleton";
 import ExamCard from "./components/Exam-Card";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
 
 // Fallback exam data to ensure page always renders
 const FALLBACK_EXAMS = [
@@ -131,7 +131,7 @@ const HeroSection = () => (
     initial={{ opacity: 0, y: -20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.6 }}
-    className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-black py-20 px-4 overflow-hidden"
+    className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-black py-24 md:py-28 px-4 overflow-hidden"
   >
     <BackgroundPattern />
     <div className="relative max-w-7xl mx-auto text-center z-10">
@@ -161,7 +161,7 @@ const HeroSection = () => (
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.5 }}
-        className="mt-8 flex flex-wrap items-center justify-center gap-4 text-blue-100"
+      className="mt-8 flex flex-wrap items-center justify-center gap-5 text-blue-100"
       >
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-5 h-5 stroke-green-500 fill-white" />
@@ -218,9 +218,9 @@ const StatsSection = ({ examCount }: { examCount: number }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.6 }}
-      className="max-w-7xl mx-auto px-4 -mt-12 mb-12 relative z-20"
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-14 md:-mt-16 mb-14 relative z-20"
     >
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -232,7 +232,7 @@ const StatsSection = ({ examCount }: { examCount: number }) => {
               whileHover={{ scale: 1.05, y: -5 }}
             >
               <Card className="bg-white shadow-lg border-0 rounded-2xl overflow-hidden">
-                <CardContent className={`p-6 text-center ${stat.bgColor}`}>
+                <CardContent className={`p-6 md:p-7 text-center ${stat.bgColor}`}>
                   <Icon className={`w-8 h-8 mx-auto mb-3 ${stat.color}`} />
                   <div
                     className={`text-3xl font-bold mb-1 font-['Poppins',sans-serif] ${stat.color}`}
@@ -271,9 +271,9 @@ const SearchFilterSection = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.6 }}
-      className="max-w-7xl mx-auto px-4 mb-8"
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10"
     >
-      <div className="space-y-4">
+      <div className="space-y-5">
         {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
@@ -311,7 +311,7 @@ const SearchFilterSection = ({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                className="flex gap-2 flex-wrap"
+                className="flex gap-2.5 flex-wrap"
               >
                 {REGIONS.map((region) => (
                   <button
@@ -336,7 +336,7 @@ const SearchFilterSection = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2 text-sm text-gray-600 font-['Nunito',sans-serif]"
+            className="flex flex-wrap items-center gap-2 text-sm text-gray-600 font-['Nunito',sans-serif]"
           >
             <span>Active filters:</span>
             {searchQuery && (
@@ -371,10 +371,10 @@ const StudyTipsSection = () => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: 0.7, duration: 0.6 }}
-    className="max-w-7xl mx-auto px-4 mb-12"
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16"
   >
     <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-xl rounded-2xl overflow-hidden">
-      <CardContent className="p-8">
+      <CardContent className="p-8 md:p-10">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 bg-blue-600 rounded-xl">
             <Lightbulb className="w-6 h-6 text-white" />
@@ -383,7 +383,7 @@ const StudyTipsSection = () => (
             Study Tips & Best Practices
           </h2>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
           {STUDY_TIPS.map((tip, index) => {
             const Icon = tip.icon;
             return (
@@ -481,7 +481,7 @@ export default function ExamPrepPage() {
       <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-blue-50">
         <HeroSection />
         <StatsSection examCount={0} />
-        <div className="max-w-7xl mx-auto px-4 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
               <ExamCardSkeleton key={i} />
@@ -537,7 +537,7 @@ export default function ExamPrepPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.6 }}
-          className="px-4 mb-12"
+          className="px-4 sm:px-6 lg:px-8 mb-16"
         >
           {filteredExams.length === 0 ? (
             <motion.div
@@ -565,7 +565,7 @@ export default function ExamPrepPage() {
             </motion.div>
           ) : (
             <>
-              <div className="mb-6">
+              <div className="mb-7">
                 <h2 className="text-3xl font-bold text-gray-800 mb-2 font-['Poppins',sans-serif]">
                   Select Your Exam
                 </h2>

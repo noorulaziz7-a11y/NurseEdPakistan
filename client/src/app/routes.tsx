@@ -38,6 +38,10 @@ import GuidePage from "@/pages/exam-prep/guide";
 import Dashboard from "@/pages/dashboard";
 import Contact from "@/pages/contact";
 import { lazy } from "@/components/lazy";
+const BlogListPage = lazy(() => import("@/modules/blog/pages/BlogListPage"));
+const BlogDetailPage = lazy(() => import("@/modules/blog/pages/BlogDetailPage"));
+const BlogAdminPage = lazy(() => import("@/modules/blog/pages/BlogAdminPage"));
+const McqAdminPage = lazy(() => import("@/modules/mcqs/pages/McqAdminPage"));
 
 export const routes = [
   // 🏠 Core
@@ -48,10 +52,14 @@ export const routes = [
   { path: "/study-library", component: StudyLibrary },
   { path: "/auth", component: AuthPage },
   { path: "/contact", component: Contact },
+  { path: "/blog", component: BlogListPage },
+  { path: "/blog/:slug", component: BlogDetailPage },
+  { path: "/admin/blog", component: BlogAdminPage },
+  { path: "/admin/mcqs", component: McqAdminPage },
 
   // 📘 Exam prep
   { path: "/exam-prep", component: ExamPrep },
-  { path: "/exam-prep/dashboard", component: Dashboard },
+  { path: "/exam-prep/dashboard", component: lazy(() => import("@/pages/dashboard")) },
   { path: "/exam-prep/leaderboard", component: lazy(() => import("@/pages/exam-prep/leaderboard")) },
   { path: "/exam-prep/daily-challenge", component: lazy(() => import("@/pages/exam-prep/daily-challenge")) },
   { path: "/exam-prep/analytics", component: lazy(() => import("@/pages/exam-prep/analytics")) },

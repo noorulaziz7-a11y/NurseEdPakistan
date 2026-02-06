@@ -3,13 +3,13 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/hooks/use-theme";
 import { Moon, Sun, Monitor } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/shared/ui/dropdown-menu";
 
 export const ThemeToggle: React.FC = () => {
   const { theme, setTheme } = useTheme();

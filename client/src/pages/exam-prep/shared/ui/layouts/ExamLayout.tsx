@@ -1,5 +1,5 @@
 import React from "react";
-import ExamNav from "../../../components/exam-nav";
+import ExamNav from "@/pages/exam-prep/components/exam-nav";
 
 interface ExamLayoutProps {
   children: React.ReactNode;

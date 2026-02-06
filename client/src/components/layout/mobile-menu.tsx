@@ -1,37 +1,36 @@
 import React from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/ui/sheet";
 import { Link } from "wouter";
 
 export default function MobileMenu({
-  open,
+  isOpen,
   onClose,
+  navLinks,
+  isActiveLink,
 }: {
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
+  navLinks: { href: string; label: string }[];
+  isActiveLink: (href: string) => boolean;
 }) {
-  const navLinks = [
-    { name: "Home", path: "/" },
-    { name: "Colleges", path: "/colleges" },
-    { name: "Courses", path: "/courses" },
-    { name: "Exam Prep", path: "/exam-prep" },
-    { name: "Study Library", path: "/study-library" },
-    { name: "Contact", path: "/contact" },
-  ];
-
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-[250px]">
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="w-[280px] sm:w-[320px]">
         <SheetHeader>
           <SheetTitle className="text-lg font-semibold">Menu</SheetTitle>
         </SheetHeader>
-        <nav className="mt-6 flex flex-col gap-4">
+        <nav className="mt-6 flex flex-col gap-2">
           {navLinks.map((link) => (
-            <Link key={link.path} href={link.path}>
+            <Link key={link.href} href={link.href}>
               <span
                 onClick={onClose}
-                className="block text-base font-medium text-muted-foreground hover:text-primary transition"
+                className={`block rounded-xl px-3 py-2 text-base font-medium transition ${
+                  isActiveLink(link.href)
+                    ? "bg-blue-600 text-white"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                }`}
               >
-                {link.name}
+                {link.label}
               </span>
             </Link>
           ))}

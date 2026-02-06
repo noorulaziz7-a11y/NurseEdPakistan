@@ -3,9 +3,9 @@ import { useRoute, Link } from "wouter";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { exams } from "./exam-data";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/ui/tabs";
 import {
   BookOpen,
   ClipboardCheck,
@@ -23,11 +23,11 @@ import {
   TrendingUp,
   ArrowRight,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import Breadcrumbs from "@/components/exam-prep/Breadcrumbs";
-import SectionHeader from "@/components/exam-prep/SectionHeader";
-import { ExamPageSEO } from "@/components/exam-prep/ExamPageSEO";
-import ProgressWidget from "@/components/exam-prep/ProgressWidget";
+import { Badge } from "@/shared/ui/badge";
+import Breadcrumbs from "@/modules/exams/components/Breadcrumbs";
+import SectionHeader from "@/modules/exams/components/SectionHeader";
+import { ExamPageSEO } from "@/modules/exams/components/ExamPageSEO";
+import ProgressWidget from "@/modules/exams/components/ProgressWidget";
 
 export default function DynamicExamPage() {
   const [, params] = useRoute("/exam-prep/:examId");

@@ -1,4 +1,4 @@
-import QuizSetupForm from "@/components/exam-prep/quiz/QuizSetupForm";
+import QuizSetupForm from "@/modules/exams/components/quiz/QuizSetupForm";
 
 export default function QuizSetupPage() {
   return (

@@ -1,6 +1,6 @@
 // src/pages/exam-prep/ielts/writing.tsx
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/ui/button";
 
 export default function IELTSWriting() {
   return (

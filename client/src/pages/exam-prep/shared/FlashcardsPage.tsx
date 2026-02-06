@@ -1,6 +1,6 @@
 import { useRoute, Link } from "wouter";
-import { exams } from "../exam-data";
-import { Button } from "@/components/ui/button";
+import { exams } from "@/pages/exam-prep/exam-data";
+import { Button } from "@/shared/ui/button";
 import { ArrowLeft, Layers } from "lucide-react";
 
 export default function FlashcardsPage() {

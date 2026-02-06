@@ -1,8 +1,8 @@
 import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/shared/ui/button";
+import { Card, CardContent } from "@/shared/ui/card";
 import { BookOpen, ClipboardCheck, Crown, Sparkles } from "lucide-react";
-import { exams } from "../exam-data";
+import { exams } from "@/pages/exam-prep/exam-data";
 
 interface ExamOverviewProps {
   examId: string;
