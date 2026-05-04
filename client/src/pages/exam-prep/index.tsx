@@ -22,58 +22,7 @@ import { Input } from "@/shared/ui/input";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-
-// Fallback exam data to ensure page always renders
-const FALLBACK_EXAMS = [
-  {
-    id: "nclex",
-    name: "NCLEX-RN",
-    description: "US/Canada licensure exam",
-    badge: "Popular",
-    badgeColor: "bg-blue-100 text-blue-700",
-    region: "North America",
-  },
-  {
-    id: "snle",
-    name: "SNLE",
-    description: "Saudi licensure exam",
-    badge: "KSA",
-    badgeColor: "bg-green-100 text-green-700",
-    region: "Middle East",
-  },
-  {
-    id: "moh",
-    name: "MOH",
-    description: "UAE Ministry of Health exam",
-    badge: "UAE",
-    badgeColor: "bg-yellow-100 text-yellow-700",
-    region: "Middle East",
-  },
-  {
-    id: "dha",
-    name: "DHA",
-    description: "Dubai Health Authority exam",
-    badge: "Dubai",
-    badgeColor: "bg-red-100 text-red-700",
-    region: "Middle East",
-  },
-  {
-    id: "haad",
-    name: "HAAD",
-    description: "Abu Dhabi DOH exam",
-    badge: "Abu Dhabi",
-    badgeColor: "bg-purple-100 text-purple-700",
-    region: "Middle East",
-  },
-  {
-    id: "ielts",
-    name: "IELTS",
-    description: "Language proficiency",
-    badge: "Language",
-    badgeColor: "bg-pink-100 text-pink-700",
-    region: "Global",
-  },
-];
+import { exams as examDirectory } from "@/pages/exam-prep/exam-data";
 
 const REGIONS = ["All Regions", "North America", "Middle East", "Global"];
 const STUDY_TIPS = [
@@ -416,11 +365,11 @@ export default function ExamPrepPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
 
-  const { data: exams, isLoading, isError, error } = useQuery({
-    queryKey: ["exams"],
+  const { data: apiExams, isLoading, isError } = useQuery({
+    queryKey: ["/api/v1/exams"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/exams", {
+        const res = await fetch("/api/v1/exams", {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
@@ -430,14 +379,10 @@ export default function ExamPrepPage() {
           throw new Error(`Failed to fetch exams: ${res.status} ${res.statusText}`);
         }
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          return data;
-        }
-        console.warn("Server returned empty exams array, using fallback");
-        return FALLBACK_EXAMS;
+        return Array.isArray(data) ? data : [];
       } catch (err) {
-        console.warn("/api/exams failed — using client fallback.", err);
-        return FALLBACK_EXAMS;
+        console.warn("/api/v1/exams failed.", err);
+        throw err;
       }
     },
     staleTime: 0,
@@ -448,9 +393,32 @@ export default function ExamPrepPage() {
     retryDelay: 1000,
   });
 
+  const displayExams = useMemo(() => {
+    const resolveRegion = (country: string) => {
+      const value = country.toLowerCase();
+      if (value.includes("usa") || value.includes("canada")) return "North America";
+      if (value.includes("dubai") || value.includes("uae") || value.includes("abu dhabi") || value.includes("saudi")) {
+        return "Middle East";
+      }
+      return "Global";
+    };
+
+    return examDirectory.map((exam) => {
+      const match = apiExams?.find?.((row: any) => {
+        const name = typeof row?.name === "string" ? row.name.toLowerCase() : "";
+        return name === exam.name.toLowerCase();
+      });
+      return {
+        ...exam,
+        region: resolveRegion(exam.country),
+        // keep numeric DB id around if needed later
+        dbId: match?.id ?? null,
+      };
+    });
+  }, [apiExams]);
+
   // Filter exams based on search query and region
   const filteredExams = useMemo(() => {
-    const displayExams = exams && Array.isArray(exams) && exams.length > 0 ? exams : FALLBACK_EXAMS;
     let filtered = displayExams;
 
     // Search filter
@@ -473,7 +441,7 @@ export default function ExamPrepPage() {
     }
 
     return filtered;
-  }, [exams, searchQuery, selectedRegion]);
+  }, [displayExams, searchQuery, selectedRegion]);
 
   // Loading state
   if (isLoading) {

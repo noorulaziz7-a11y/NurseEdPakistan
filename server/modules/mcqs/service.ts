@@ -1,4 +1,3 @@
-import { storage, MemStorage } from "../../storage";
 import { db } from "../../db";
 import {
   mcqs,
@@ -7,150 +6,34 @@ import {
   difficultyLevels,
   examMcqs,
   exams,
+  attemptAnswers,
+  examAttempts,
 } from "@shared/schema";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { mcqCsvRowSchema } from "./schema";
-
-const fallbackStorage =
-  process.env.NODE_ENV !== "production" ? new MemStorage() : null;
 
 export const normalizeExam = (str: string) =>
   str.toLowerCase().replace(/[^a-z0-9]/g, "");
-
-type QuestionFilters = {
-  subject?: string;
-  system?: string;
-  difficulty?: string;
-  limit?: number;
-};
-
-async function applyRelaxations(
-  examKey: string,
-  baseFilters: QuestionFilters
-) {
-  const { subject, system, difficulty, limit } = baseFilters;
-  const relaxations = [
-    { subject, difficulty, limit }, // drop system first
-    { difficulty, limit }, // drop subject too
-    { limit }, // drop difficulty too
-  ];
-
-  for (const filters of relaxations) {
-    const questions = await storage.getExamQuestions(examKey, filters);
-    if (questions.length > 0) return questions;
-  }
-
-  return [];
-}
-
-async function applyRelaxationsToFallback(
-  examKey: string,
-  baseFilters: QuestionFilters
-) {
-  if (!fallbackStorage) return [];
-  const { subject, system, difficulty, limit } = baseFilters;
-  const relaxations = [
-    { subject, difficulty, limit },
-    { difficulty, limit },
-    { limit },
-  ];
-
-  for (const filters of relaxations) {
-    const questions = await fallbackStorage.getExamQuestions(examKey, filters);
-    if (questions.length > 0) return questions;
-  }
-
-  return [];
-}
-
-export async function getExamQuestionsWithFallback(
-  examIdentifier: string,
-  baseFilters: QuestionFilters
-) {
-  const normalizedExam = normalizeExam(examIdentifier);
-  let questions = await storage.getExamQuestions(normalizedExam, baseFilters);
-
-  if (questions.length === 0 && (baseFilters.subject || baseFilters.system || baseFilters.difficulty)) {
-    questions = await applyRelaxations(normalizedExam, baseFilters);
-  }
-
-  if (questions.length === 0) {
-    const exams = await storage.getAllExams();
-    const exam = exams.find((e) => normalizeExam(e.id) === normalizedExam);
-
-    if (exam?.name) {
-      console.log(
-        `No questions found for ID ${normalizedExam}, trying name: ${exam.name}`
-      );
-      let questionsByName = await storage.getExamQuestions(exam.name, baseFilters);
-      if (
-        questionsByName.length === 0 &&
-        (baseFilters.subject || baseFilters.system || baseFilters.difficulty)
-      ) {
-        questionsByName = await applyRelaxations(exam.name, baseFilters);
-      }
-      if (questionsByName.length > 0) {
-        questions = questionsByName;
-      }
-    }
-  }
-
-  if (questions.length === 0 && fallbackStorage) {
-    let fallbackQuestions = await fallbackStorage.getExamQuestions(
-      normalizedExam,
-      baseFilters
-    );
-    if (
-      fallbackQuestions.length === 0 &&
-      (baseFilters.subject || baseFilters.system || baseFilters.difficulty)
-    ) {
-      fallbackQuestions = await applyRelaxationsToFallback(
-        normalizedExam,
-        baseFilters
-      );
-    }
-    if (fallbackQuestions.length === 0) {
-      const fallbackExams = await fallbackStorage.getAllExams();
-      const fallbackExam = fallbackExams.find(
-        (e) => normalizeExam(e.id) === normalizedExam
-      );
-      if (fallbackExam?.name) {
-        fallbackQuestions = await fallbackStorage.getExamQuestions(
-          fallbackExam.name,
-          baseFilters
-        );
-        if (
-          fallbackQuestions.length === 0 &&
-          (baseFilters.subject || baseFilters.system || baseFilters.difficulty)
-        ) {
-          fallbackQuestions = await applyRelaxationsToFallback(
-            fallbackExam.name,
-            baseFilters
-          );
-        }
-      }
-    }
-    if (fallbackQuestions.length > 0) {
-      questions = fallbackQuestions;
-    }
-  }
-
-  return questions;
-}
-
-export async function getExamQuestionsLegacy(examType: string) {
-  const normalizedExam = normalizeExam(examType);
-  return storage.getExamQuestions(normalizedExam);
-}
-
-export async function getExamQuestionById(id: string) {
-  return storage.getExamQuestionById(id);
+async function resolveExamId(examIdentifier: string) {
+  const numeric = Number(examIdentifier);
+  if (Number.isFinite(numeric)) return numeric;
+  const normalized = normalizeExam(examIdentifier);
+  const rows = await db.select({ id: exams.id, name: exams.name }).from(exams);
+  const match = rows.find((row) => normalizeExam(row.name) === normalized);
+  return match?.id ?? null;
 }
 
 export async function getDailyChallenge(examType: string) {
-  const normalizedExam = normalizeExam(examType);
-  const questions = await storage.getExamQuestions(normalizedExam, { limit: 1 });
-  return questions[0] || null;
+  const examId = await resolveExamId(examType);
+  if (!examId) return null;
+  const [row] = await db
+    .select({ id: mcqs.id })
+    .from(mcqs)
+    .where(eq(mcqs.examId, examId))
+    .orderBy(sql`RANDOM()`)
+    .limit(1);
+  if (!row) return null;
+  return getMcqById(row.id);
 }
 
 export function getDailyChallengeStats() {
@@ -168,6 +51,11 @@ type McqOptionInput =
 type McqPayload = {
   question: string;
   explanation?: string | null;
+  type?: "single" | "multiple" | "true_false";
+  imageUrl?: string | null;
+  reference?: string | null;
+  year?: number | null;
+  rationaleType?: "detailed" | "quick" | "video" | null;
   difficulty?: "easy" | "moderate" | "hard" | null;
   options: McqOptionInput[];
   correctIndex?: number | null;
@@ -241,6 +129,11 @@ export async function createMCQ(payload: McqPayload) {
       .values({
         question,
         explanation: payload.explanation ?? null,
+        type: payload.type ?? "single",
+        imageUrl: payload.imageUrl ?? null,
+        reference: payload.reference ?? null,
+        year: payload.year ?? null,
+        rationaleType: payload.rationaleType ?? null,
         examId: payload.examId,
         subjectId: payload.subjectId,
         topicId,
@@ -293,6 +186,11 @@ export async function updateMCQ(id: string, payload: Partial<McqPayload>) {
   const updateFields: Partial<typeof mcqs.$inferInsert> = {
     question,
     explanation: payload.explanation,
+    type: payload.type,
+    imageUrl: payload.imageUrl,
+    reference: payload.reference,
+    year: payload.year,
+    rationaleType: payload.rationaleType,
     examId: payload.examId,
     subjectId: payload.subjectId,
     topicId,
@@ -388,15 +286,22 @@ export async function getMcqById(id: string) {
 export async function listMcqs(params: {
   page?: number;
   pageSize?: number;
+  limit?: number;
+  random?: boolean;
+  adaptive?: boolean;
+  excludeAttempted?: boolean;
+  includeExplanation?: boolean;
+  search?: string;
   difficulty?: "easy" | "moderate" | "hard";
   examId?: number;
   subjectId?: string;
   topicId?: string;
   system?: string;
+  userId?: string | null;
 }) {
   const page = params.page ?? 1;
-  const pageSize = params.pageSize ?? 20;
-  const offset = (page - 1) * pageSize;
+  const pageSize = params.limit ?? params.pageSize ?? 20;
+  const offset = params.limit ? 0 : (page - 1) * pageSize;
 
   const conditions = [];
   if (params.difficulty) {
@@ -414,6 +319,19 @@ export async function listMcqs(params: {
   if (params.system) {
     conditions.push(eq(mcqs.system, params.system));
   }
+  if (params.search) {
+    conditions.push(ilike(mcqs.question, `%${params.search}%`));
+  }
+  if (params.excludeAttempted && params.userId) {
+    conditions.push(
+      sql`NOT EXISTS (
+        SELECT 1 FROM ${attemptAnswers} aa
+        JOIN ${examAttempts} ea ON aa.attempt_id = ea.id
+        WHERE ea.user_id = ${params.userId}
+          AND aa.mcq_id = ${mcqs.id}
+      )`
+    );
+  }
 
   const totalResult = conditions.length
     ? await db
@@ -423,20 +341,34 @@ export async function listMcqs(params: {
     : await db.select({ count: sql<number>`count(*)` }).from(mcqs);
   const total = Number(totalResult[0]?.count ?? 0);
 
-  const rows = conditions.length
-    ? await db
-        .select()
-        .from(mcqs)
-        .where(and(...conditions))
-        .orderBy(desc(mcqs.createdAt))
-        .limit(pageSize)
-        .offset(offset)
-    : await db
-        .select()
-        .from(mcqs)
-        .orderBy(desc(mcqs.createdAt))
-        .limit(pageSize)
-        .offset(offset);
+  const includeExplanation = params.includeExplanation !== false;
+  const selectFields = {
+    id: mcqs.id,
+    question: mcqs.question,
+    explanation: includeExplanation ? mcqs.explanation : sql<null>`null`,
+    type: mcqs.type,
+    imageUrl: mcqs.imageUrl,
+    reference: mcqs.reference,
+    year: mcqs.year,
+    rationaleType: mcqs.rationaleType,
+    examId: mcqs.examId,
+    subjectId: mcqs.subjectId,
+    topicId: mcqs.topicId,
+    difficulty: mcqs.difficulty,
+    system: mcqs.system,
+    difficultyId: mcqs.difficultyId,
+    createdBy: mcqs.createdBy,
+    createdAt: mcqs.createdAt,
+    updatedAt: mcqs.updatedAt,
+  };
+  const orderByClause = params.random ? sql`RANDOM()` : desc(mcqs.createdAt);
+  const baseQuery = conditions.length
+    ? db.select(selectFields).from(mcqs).where(and(...conditions))
+    : db.select(selectFields).from(mcqs);
+  const rows = await baseQuery
+    .orderBy(orderByClause)
+    .limit(pageSize)
+    .offset(offset);
 
   const ids = rows.map((row) => row.id);
   if (ids.length === 0) {
@@ -624,6 +556,12 @@ export async function bulkUploadCsvFile(csv: string) {
       if (record.topicid && !record.topic_id) {
         record.topic_id = record.topicid;
       }
+      if (record.imageurl && !record.image_url) {
+        record.image_url = record.imageurl;
+      }
+      if (record.rationaletype && !record.rationale_type) {
+        record.rationale_type = record.rationaletype;
+      }
       const parsed = mcqCsvRowSchema.parse(record);
 
       const options = [
@@ -661,6 +599,11 @@ export async function bulkUploadCsvFile(csv: string) {
             topicId: parsed.topic_id || null,
             question: parsed.question,
             explanation: parsed.explanation || null,
+            type: parsed.type ?? "single",
+            imageUrl: parsed.image_url || null,
+            reference: parsed.reference || null,
+            year: parsed.year ?? null,
+            rationaleType: parsed.rationale_type ?? null,
             difficulty: parsed.difficulty,
             system: parsed.system,
             difficultyId,

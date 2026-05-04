@@ -9,22 +9,20 @@ import {
   exams,
   examSubjects,
 } from "@shared/schema";
-import { storage, MemStorage } from "./storage";
-import { randomUUID } from "crypto";
 
 export async function seedDatabase() {
   try {
-    // Check if database is already seeded
+    // This seeder is intended for PostgreSQL (Drizzle) only.
+    // MemStorage seeds demo data in its constructor; skip DB seed in that mode.
     if (process.env.USE_MEMORY_STORAGE === "true") {
-      if (storage instanceof MemStorage && storage["examQuestions"].size > 0) {
-        console.log("Memory storage already seeded, skipping...");
-        return;
-      }
-    } else {
-      const existingQuestions = await db.select().from(mcqs).limit(1);
-      if (existingQuestions.length > 0) {
-        console.log("MCQs already seeded, skipping MCQ seed...");
-      }
+      console.log("USE_MEMORY_STORAGE enabled, skipping DB seed.");
+      return;
+    }
+
+    // Check if database is already seeded
+    const existingQuestions = await db.select().from(mcqs).limit(1);
+    if (existingQuestions.length > 0) {
+      console.log("MCQs already seeded, skipping MCQ seed...");
     }
 
     console.log("🌱 Seeding database with initial data...");
@@ -82,33 +80,9 @@ export async function seedDatabase() {
       },
     ];
 
-    if (process.env.USE_MEMORY_STORAGE === "true") {
-      if (storage instanceof MemStorage) {
-        sampleQuestions.forEach((q) => {
-          const id = randomUUID();
-          const question = {
-            id,
-            examType: q.examType,
-            question: q.question,
-            options: q.options as any,
-            correctAnswer: q.correctAnswer,
-            explanation: q.explanation || "",
-            difficulty: q.difficulty || "intermediate",
-            category: q.category || "Medical-Surgical",
-            system: (q as any).system || null,
-          };
-          if (storage instanceof MemStorage) {
-            storage.createExamQuestion(question);
-          }
-        });
-        console.log("✅ MCQs seeded successfully in memory!");
-      }
-    } else {
-      const existingQuestions = await db.select().from(mcqs).limit(1);
-      if (existingQuestions.length === 0) {
-        await db.insert(mcqs).values(sampleQuestions as ExamQuestion[]);
-        console.log("✅ MCQs seeded successfully!");
-      }
+    if (existingQuestions.length === 0) {
+      await db.insert(mcqs).values(sampleQuestions as ExamQuestion[]);
+      console.log("✅ MCQs seeded successfully!");
     }
 
     // ✅ Seed exams
@@ -170,10 +144,17 @@ export async function seedDatabase() {
           .returning();
         console.log("✅ Exams seeded!");
 
-        const examByName = seededExams.reduce<Record<string, number>>((acc, exam) => {
-          acc[exam.name.toLowerCase()] = exam.id;
+        const examByName = seededExams.reduce(
+          (acc: Record<string, number>, exam: { id?: unknown; name?: unknown }) => {
+            const name = typeof exam?.name === "string" ? exam.name.toLowerCase() : "";
+            const id = Number(exam?.id);
+          if (name && Number.isFinite(id)) {
+            acc[name] = id;
+          }
           return acc;
-        }, {});
+          },
+          {} as Record<string, number>
+        );
 
         const subjectRows = [
           "Medical-Surgical",
@@ -200,6 +181,42 @@ export async function seedDatabase() {
       }
     } catch (error) {
       console.warn("Skipping exam seed due to schema mismatch:", error);
+    }
+
+    // ✅ Ensure exam subjects exist (even if exams were already seeded earlier)
+    try {
+      const existingSubjects = await db.select().from(examSubjects).limit(1);
+      if (existingSubjects.length === 0) {
+        const allExams = await db.select({ id: exams.id, name: exams.name }).from(exams);
+        if (allExams.length > 0) {
+          const subjectNames = [
+            "Medical-Surgical",
+            "Pediatrics",
+            "Pharmacology",
+            "Mental Health",
+            "Maternal-Newborn",
+            "Fundamentals",
+            "Critical Care",
+            "Community Health",
+            "Leadership",
+            "Emergency",
+            "Ethics",
+          ];
+
+          const subjectRows = subjectNames.flatMap((name, index) =>
+            allExams.map((exam: { id: number }) => ({
+              examId: exam.id,
+              name,
+              sortOrder: index,
+            }))
+          );
+
+          await db.insert(examSubjects).values(subjectRows);
+          console.log("✅ Exam subjects seeded (repair)!");
+        }
+      }
+    } catch (error) {
+      console.warn("Skipping exam subject repair seed:", error);
     }
 
     // ✅ Seed colleges

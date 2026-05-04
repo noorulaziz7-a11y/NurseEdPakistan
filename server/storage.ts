@@ -1,8 +1,6 @@
 import {
   type User,
   type InsertUser,
-  type ExamQuestion,
-  type InsertExamQuestion,
   type College,
   type InsertCollege,
   type StudyLibrary,
@@ -26,14 +24,6 @@ export interface IStorage {
 
   // Exams
   getAllExams(): Promise<any[]>;
-
-  // Exam Questions
-  getExamQuestions(
-    examType: string,
-    filters?: { subject?: string; system?: string; difficulty?: string; limit?: number }
-  ): Promise<ExamQuestion[]>;
-  getExamQuestionById(id: string): Promise<ExamQuestion | undefined>;
-  createExamQuestion(question: InsertExamQuestion): Promise<ExamQuestion>;
 
   // Colleges
   getColleges(filters?: { city?: string; type?: string; programs?: string }): Promise<College[]>;
@@ -65,7 +55,6 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
-  private examQuestions: Map<string, ExamQuestion>;
   private colleges: Map<string, College>;
   private studyLibraries: Map<string, StudyLibrary>;
   private newsArticles: Map<string, NewsArticle>;
@@ -75,7 +64,6 @@ export class MemStorage implements IStorage {
 
   constructor() {
     this.users = new Map();
-    this.examQuestions = new Map();
     this.colleges = new Map();
     this.studyLibraries = new Map();
     this.newsArticles = new Map();
@@ -105,40 +93,7 @@ export class MemStorage implements IStorage {
   }
 
   private seedData() {
-    // Seed exam questions
-    const sampleQuestions: InsertExamQuestion[] = [
-      {
-        examType: "NCLEX-RN",
-        question: "A nurse is caring for a client with chronic kidney disease. Which of the following dietary recommendations would be most appropriate?",
-        options: ["Increase protein intake to 2.0 g/kg/day", "Restrict phosphorus and potassium intake", "Encourage high-sodium foods for fluid retention", "Increase fluid intake to 3 liters per day"],
-        correctAnswer: "Restrict phosphorus and potassium intake",
-        explanation: "Clients with chronic kidney disease need to restrict phosphorus and potassium as the kidneys cannot effectively filter these electrolytes, leading to dangerous accumulation.",
-        difficulty: "intermediate",
-        category: "Medical-Surgical"
-      },
-      {
-        examType: "MOH",
-        question: "What is the most important initial assessment for a patient presenting with chest pain?",
-        options: ["Blood pressure measurement", "Cardiac enzyme levels", "Electrocardiogram", "Complete blood count"],
-        correctAnswer: "Electrocardiogram",
-        explanation: "An ECG is the most important initial assessment as it can quickly identify cardiac arrhythmias or signs of myocardial infarction.",
-        difficulty: "beginner",
-        category: "Emergency Care"
-      },
-      {
-        examType: "SNLE",
-        question: "According to Pakistan Nursing Council guidelines, what is the minimum educational requirement for nursing practice?",
-        options: ["Certificate in Nursing", "Diploma in Nursing", "Bachelor of Science in Nursing", "Master of Science in Nursing"],
-        correctAnswer: "Bachelor of Science in Nursing",
-        explanation: "The Pakistan Nursing Council requires a minimum of BSN degree for professional nursing practice as per current regulations.",
-        difficulty: "beginner",
-        category: "Professional Standards"
-      }
-    ];
-
-    sampleQuestions.forEach(q => this.createExamQuestion(q));
-
-    // Seed exams (for /api/exams)
+    // Seed exams for non-DB storage
     this.exams = [
       {
         id: "nclex",
@@ -349,51 +304,6 @@ export class MemStorage implements IStorage {
   // Exams
   async getAllExams(): Promise<any[]> {
     return this.exams;
-  }
-
-  // Exam Question methods
-  async getExamQuestions(
-    examType: string,
-    filters?: { subject?: string; system?: string; difficulty?: string; limit?: number }
-  ): Promise<ExamQuestion[]> {
-    const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const normalizedExam = normalize(examType);
-
-    let questions = Array.from(this.examQuestions.values()).filter(
-      (q) => normalize(q.examType) === normalizedExam
-    );
-
-    if (filters?.subject) {
-      const subject = filters.subject.toLowerCase();
-      questions = questions.filter((q) => q.category?.toLowerCase() === subject);
-    }
-
-    if (filters?.system) {
-      const system = filters.system.toLowerCase();
-      questions = questions.filter((q) => q.system?.toLowerCase() === system);
-    }
-
-    if (filters?.difficulty) {
-      const difficulty = filters.difficulty.toLowerCase();
-      questions = questions.filter((q) => q.difficulty?.toLowerCase() === difficulty);
-    }
-
-    return filters?.limit ? questions.slice(0, filters.limit) : questions;
-  }
-
-  async getExamQuestionById(id: string): Promise<ExamQuestion | undefined> {
-    return this.examQuestions.get(id);
-  }
-
-  async createExamQuestion(insertQuestion: InsertExamQuestion): Promise<ExamQuestion> {
-    const id = randomUUID();
-    const question: ExamQuestion = {
-      ...insertQuestion,
-      id,
-      system: insertQuestion.system ?? null,
-    };
-    this.examQuestions.set(id, question);
-    return question;
   }
 
   // College methods

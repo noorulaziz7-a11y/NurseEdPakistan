@@ -1,4 +1,3 @@
-import { storage } from "../../storage";
 import { db } from "../../db";
 import {
   examAttempts,
@@ -16,33 +15,15 @@ import {
 import { and, asc, eq, ilike, inArray, sql } from "drizzle-orm";
 
 export async function getAllExams() {
-  if (!process.env.DATABASE_URL) {
-    return storage.getAllExams();
-  }
-  try {
-    return await db.select().from(exams);
-  } catch (error) {
-    console.warn("Falling back to memory exams:", error);
-    return storage.getAllExams();
-  }
+  return db.select().from(exams);
 }
 
 export async function getExamById(id: string) {
-  if (!process.env.DATABASE_URL) {
-    const items = await storage.getAllExams();
-    return items.find((e) => e.id.toString() === id);
-  }
-  try {
-    const [exam] = await db
-      .select()
-      .from(exams)
-      .where(eq(exams.id, Number(id)));
-    return exam || null;
-  } catch (error) {
-    console.warn("Falling back to memory exam lookup:", error);
-    const items = await storage.getAllExams();
-    return items.find((e) => e.id.toString() === id) || null;
-  }
+  const [exam] = await db
+    .select()
+    .from(exams)
+    .where(eq(exams.id, Number(id)));
+  return exam || null;
 }
 
 export async function createExam(payload: {
@@ -146,51 +127,26 @@ export async function listExamSubjects(params: {
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 20;
   const offset = (page - 1) * pageSize;
-
-  try {
-    const conditions = [eq(examSubjects.examId, params.examId)];
-    if (params.search) {
-      conditions.push(ilike(examSubjects.name, `%${params.search}%`));
-    }
-
-    const totalResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(examSubjects)
-      .where(and(...conditions));
-    const total = Number(totalResult[0]?.count ?? 0);
-
-    const data = await db
-      .select()
-      .from(examSubjects)
-      .where(and(...conditions))
-      .orderBy(asc(examSubjects.sortOrder), asc(examSubjects.name))
-      .limit(pageSize)
-      .offset(offset);
-
-    return { data, page, pageSize, total };
-  } catch (error) {
-    console.warn("Returning fallback exam subjects:", error);
-    const fallback = [
-      "Medical-Surgical",
-      "Pediatrics",
-      "Pharmacology",
-      "Mental Health",
-      "Maternal-Newborn",
-      "Fundamentals",
-      "Critical Care",
-      "Community Health",
-      "Leadership",
-      "Emergency",
-      "Ethics",
-    ].map((name, index) => ({
-      id: `${params.examId}-${name.toLowerCase().replace(/\s+/g, "-")}`,
-      examId: params.examId,
-      name,
-      sortOrder: index,
-      createdAt: new Date(),
-    }));
-    return { data: fallback, page, pageSize, total: fallback.length };
+  const conditions = [eq(examSubjects.examId, params.examId)];
+  if (params.search) {
+    conditions.push(ilike(examSubjects.name, `%${params.search}%`));
   }
+
+  const totalResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(examSubjects)
+    .where(and(...conditions));
+  const total = Number(totalResult[0]?.count ?? 0);
+
+  const data = await db
+    .select()
+    .from(examSubjects)
+    .where(and(...conditions))
+    .orderBy(asc(examSubjects.sortOrder), asc(examSubjects.name))
+    .limit(pageSize)
+    .offset(offset);
+
+  return { data, page, pageSize, total };
 }
 
 export async function createExamTopic(params: {
@@ -255,9 +211,8 @@ export async function listExamTopics(params: {
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 20;
   const offset = (page - 1) * pageSize;
-
   try {
-    const conditions = [];
+    const conditions: any[] = [];
     if (params.examId) {
       conditions.push(eq(examTopics.examId, params.examId));
     }
@@ -293,7 +248,8 @@ export async function listExamTopics(params: {
 
     return { data, page, pageSize, total };
   } catch (error) {
-    console.warn("Returning empty topics due to DB error:", error);
+    // Fail-safe: if schema/migrations are out of sync, don't break the exam filter UI.
+    console.warn("listExamTopics failed, returning empty.", error);
     return { data: [], page, pageSize, total: 0 };
   }
 }
@@ -334,12 +290,12 @@ export async function listExamMcqs(examId: number) {
 
   if (links.length === 0) return [];
 
-  const mcqIds = links.map((link) => link.mcqId);
+  const mcqIds = links.map((link: any) => link.mcqId);
   const rows = await db.select().from(mcqs).where(inArray(mcqs.id, mcqIds));
 
   const difficultyIds = rows
-    .map((row) => row.difficultyId)
-    .filter((id): id is number => typeof id === "number");
+    .map((row: any) => row.difficultyId)
+    .filter((id: any): id is number => typeof id === "number");
 
   const [options, tags, difficultyRows] = await Promise.all([
     db.select().from(mcqOptions).where(inArray(mcqOptions.mcqId, mcqIds)),
@@ -352,11 +308,11 @@ export async function listExamMcqs(examId: number) {
       : Promise.resolve([]),
   ]);
 
-  return rows.map((mcq) => ({
+  return rows.map((mcq: any) => ({
     ...mcq,
-    options: options.filter((option) => option.mcqId === mcq.id),
-    tags: tags.filter((tag) => tag.mcqId === mcq.id),
-    difficulty: difficultyRows.find((d) => d.id === mcq.difficultyId) || null,
+    options: options.filter((option: any) => option.mcqId === mcq.id),
+    tags: tags.filter((tag: any) => tag.mcqId === mcq.id),
+    difficulty: difficultyRows.find((d: any) => d.id === mcq.difficultyId) || null,
   }));
 }
 
@@ -440,7 +396,7 @@ export const ExamGeneratorService = {
       other: [],
     };
 
-    shuffle(mcqs).forEach((mcq) => {
+    shuffle(mcqs).forEach((mcq: any) => {
       const key = mcq.difficulty?.name?.toLowerCase() || "other";
       if (key in buckets) {
         buckets[key].push(mcq);
@@ -461,7 +417,7 @@ export async function startExamAttempt(params: {
   const questions = await ExamGeneratorService.generateExam(params.examId);
   if (questions.length === 0) return null;
 
-  const questionIds = questions.map((question) => question.id);
+  const questionIds = questions.map((question: any) => question.id);
   const [attempt] = await db
     .insert(examAttempts)
     .values({
@@ -483,8 +439,8 @@ async function getMcqsByIds(mcqIds: string[]) {
   const rows = await db.select().from(mcqs).where(inArray(mcqs.id, mcqIds));
 
   const difficultyIds = rows
-    .map((row) => row.difficultyId)
-    .filter((id): id is number => typeof id === "number");
+    .map((row: any) => row.difficultyId)
+    .filter((id: any): id is number => typeof id === "number");
 
   const [options, tags, difficultyRows] = await Promise.all([
     db.select().from(mcqOptions).where(inArray(mcqOptions.mcqId, mcqIds)),
@@ -497,11 +453,11 @@ async function getMcqsByIds(mcqIds: string[]) {
       : Promise.resolve([]),
   ]);
 
-  return rows.map((mcq) => ({
+  return rows.map((mcq: any) => ({
     ...mcq,
-    options: options.filter((option) => option.mcqId === mcq.id),
-    tags: tags.filter((tag) => tag.mcqId === mcq.id),
-    difficulty: difficultyRows.find((d) => d.id === mcq.difficultyId) || null,
+    options: options.filter((option: any) => option.mcqId === mcq.id),
+    tags: tags.filter((tag: any) => tag.mcqId === mcq.id),
+    difficulty: difficultyRows.find((d: any) => d.id === mcq.difficultyId) || null,
   }));
 }
 
@@ -514,13 +470,14 @@ export async function getAttemptResume(attemptId: string) {
     ? (attempt.questionIds as string[])
     : [];
   const questions = await getMcqsByIds(questionIds);
-  const answeredIds = new Set(answers.map((answer) => answer.mcqId));
-  const unanswered = questions.filter((mcq) => !answeredIds.has(mcq.id));
+  const answeredIds = new Set(answers.map((answer: any) => answer.mcqId));
+  const unanswered = questions.filter((mcq: any) => !answeredIds.has(mcq.id));
 
   return {
     attempt,
     answers,
     unanswered,
+    questions,
   };
 }
 
@@ -581,7 +538,7 @@ export async function createAttempt(input: CreateAttemptInput) {
   }
 
   const weightsConfig = input.difficultyWeights || {};
-  const weights = rows.map((row) => {
+  const weights = rows.map((row: any) => {
     const name = row.difficultyName || "default";
     const weight = weightsConfig[name] ?? 1;
     return Math.max(0.1, weight);
@@ -589,7 +546,7 @@ export async function createAttempt(input: CreateAttemptInput) {
 
   const desiredCount = input.totalQuestions || rows.length;
   const selected = weightedSampleWithoutReplacement(rows, weights, desiredCount);
-  const questionIds = selected.map((row) => row.mcqId);
+  const questionIds = selected.map((row: any) => row.mcqId);
 
   const [attempt] = await db
     .insert(examAttempts)
@@ -628,17 +585,29 @@ export async function saveAnswer(params: {
   attemptId: string;
   mcqId: string;
   selectedOptionId?: number | null;
+  selectedOptionIds?: number[] | null;
   currentQuestionIndex?: number;
   timeRemainingSeconds?: number | null;
 }) {
-  const selectedOptionId = params.selectedOptionId ?? null;
+  const selectedIds =
+    params.selectedOptionIds ??
+    (params.selectedOptionId ? [params.selectedOptionId] : null);
+  const selectedOptionId =
+    selectedIds && selectedIds.length > 0 ? selectedIds[0] : null;
   let isCorrect = false;
-  if (selectedOptionId) {
-    const [option] = await db
-      .select()
+  if (selectedIds && selectedIds.length > 0) {
+    const correctOptions = await db
+      .select({ id: mcqOptions.id, isCorrect: mcqOptions.isCorrect })
       .from(mcqOptions)
-      .where(eq(mcqOptions.id, selectedOptionId));
-    isCorrect = Boolean(option?.isCorrect);
+      .where(eq(mcqOptions.mcqId, params.mcqId));
+    const correctIds = correctOptions
+      .filter((option: any) => option.isCorrect)
+      .map((option: any) => option.id);
+    const normalizedSelected = selectedIds.slice().sort();
+    const normalizedCorrect = correctIds.slice().sort();
+    isCorrect =
+      normalizedSelected.length === normalizedCorrect.length &&
+      normalizedSelected.every((id, index) => id === normalizedCorrect[index]);
   }
 
   await db
@@ -647,6 +616,7 @@ export async function saveAnswer(params: {
       attemptId: params.attemptId,
       mcqId: params.mcqId,
       selectedOptionId,
+      selectedOptionIds: selectedIds,
       isCorrect,
       answeredAt: new Date(),
     })
@@ -654,10 +624,68 @@ export async function saveAnswer(params: {
       target: [attemptAnswers.attemptId, attemptAnswers.mcqId],
       set: {
         selectedOptionId,
+        selectedOptionIds: selectedIds,
         isCorrect,
         answeredAt: new Date(),
       },
     });
+
+  const updatePayload: Record<string, unknown> = {
+    updatedAt: new Date(),
+  };
+  if (params.currentQuestionIndex !== undefined) {
+    updatePayload.currentQuestionIndex = params.currentQuestionIndex;
+  }
+  if (params.timeRemainingSeconds !== undefined) {
+    updatePayload.timeRemainingSeconds = params.timeRemainingSeconds;
+  }
+
+  await db
+    .update(examAttempts)
+    .set(updatePayload)
+    .where(eq(examAttempts.id, params.attemptId));
+
+  return { success: true };
+}
+
+export async function createAttemptFromQuestions(params: {
+  examId: number;
+  questionIds: string[];
+  userId?: string | null;
+  timeLimitSeconds?: number | null;
+}) {
+  const uniqueIds = Array.from(new Set(params.questionIds));
+  if (uniqueIds.length === 0) return null;
+  const [attempt] = await db
+    .insert(examAttempts)
+    .values({
+      examId: params.examId,
+      userId: params.userId ?? null,
+      status: "in_progress",
+      questionIds: uniqueIds,
+      currentQuestionIndex: 0,
+      timeLimitSeconds: params.timeLimitSeconds ?? null,
+      timeRemainingSeconds: params.timeLimitSeconds ?? null,
+    })
+    .returning();
+  return attempt;
+}
+
+export async function saveAttemptProgress(params: {
+  attemptId: string;
+  currentQuestionIndex?: number;
+  timeRemainingSeconds?: number | null;
+  answers?: { mcqId: string; selectedOptionIds: number[] }[];
+}) {
+  if (params.answers && params.answers.length > 0) {
+    for (const answer of params.answers) {
+      await saveAnswer({
+        attemptId: params.attemptId,
+        mcqId: answer.mcqId,
+        selectedOptionIds: answer.selectedOptionIds,
+      });
+    }
+  }
 
   const updatePayload: Record<string, unknown> = {
     updatedAt: new Date(),
@@ -688,7 +716,7 @@ export async function submitAttempt(params: {
   const totalQuestions = Array.isArray(attempt.questionIds)
     ? attempt.questionIds.length
     : 0;
-  const correctAnswers = answers.filter((answer) => answer.isCorrect).length;
+  const correctAnswers = answers.filter((answer: any) => answer.isCorrect).length;
   const score =
     totalQuestions > 0
       ? Math.round((correctAnswers / totalQuestions) * 100)
@@ -751,7 +779,7 @@ export async function calculateResultSummary(params: {
     : [];
   const totalQuestions = questionIds.length;
   const answered = answers.length;
-  const correctAnswers = answers.filter((answer) => answer.isCorrect).length;
+  const correctAnswers = answers.filter((answer: any) => answer.isCorrect).length;
   const score =
     totalQuestions > 0
       ? Math.round((correctAnswers / totalQuestions) * 100)
@@ -771,7 +799,7 @@ export async function calculateResultSummary(params: {
   for (const tagRow of tagRows) {
     const current = tagStats.get(tagRow.tag) || { total: 0, correct: 0 };
     current.total += 1;
-    const answer = answers.find((a) => a.mcqId === tagRow.mcqId);
+    const answer = answers.find((a: any) => a.mcqId === tagRow.mcqId);
     if (answer?.isCorrect) current.correct += 1;
     tagStats.set(tagRow.tag, current);
   }
@@ -794,15 +822,15 @@ export async function calculateResultSummary(params: {
 
   let timePerQuestionSeconds: number | null = null;
   const answeredAt = answers
-    .map((answer) => ({
+    .map((answer: any) => ({
       mcqId: answer.mcqId,
       answeredAt: answer.answeredAt ? new Date(answer.answeredAt) : null,
     }))
-    .filter((entry) => entry.answeredAt);
+    .filter((entry: any) => entry.answeredAt);
 
   if (answeredAt.length > 0) {
     const sorted = answeredAt.sort(
-      (a, b) => (a.answeredAt?.getTime() || 0) - (b.answeredAt?.getTime() || 0)
+      (a: any, b: any) => (a.answeredAt?.getTime() || 0) - (b.answeredAt?.getTime() || 0)
     );
     const startedAt = attempt.startedAt ? new Date(attempt.startedAt) : null;
     const perQuestion: number[] = [];

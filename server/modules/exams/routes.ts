@@ -27,6 +27,9 @@ import {
   submitAttemptByIdHandler,
   resultSummaryHandler,
   resumeAttemptHandler,
+  createAttemptFromQuestionsHandler,
+  saveAttemptProgressHandler,
+  resumeAttemptStateHandler,
 } from "./controller";
 
 const router = Router();
@@ -58,5 +61,8 @@ router.post("/exams/attempts/:attemptId/submit", submitAttemptByIdHandler);
 router.get("/exams/attempts/:attemptId/resume", resumeAttemptHandler);
 router.post("/exam-attempts/:id/submit", submitAttemptHandler);
 router.get("/exam-attempts/:id/summary", resultSummaryHandler);
+router.post("/attempts", createAttemptFromQuestionsHandler);
+router.get("/attempts/:id", resumeAttemptStateHandler);
+router.patch("/attempts/:id/progress", saveAttemptProgressHandler);
 
 export default router;

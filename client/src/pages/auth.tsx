@@ -54,7 +54,7 @@ export default function AuthPage() {
   const registerMutation = useMutation({
     mutationFn: async (data: InsertUser) => {
       const { confirmPassword, ...registerData } = data as InsertUser & { confirmPassword: string };
-      const res = await apiRequest("POST", "/api/auth/register", registerData);
+      const res = await apiRequest("POST", "/api/v1/auth/register", registerData);
       return await res.json();
     },
     onSuccess: () => {
@@ -62,7 +62,7 @@ export default function AuthPage() {
         title: "Registration successful!",
         description: "Welcome to NurseEd Pakistan"
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/auth/me"] });
       setLocation("/");
     },
     onError: (error: any) => {
@@ -77,7 +77,7 @@ export default function AuthPage() {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginUser) => {
-      const res = await apiRequest("POST", "/api/auth/login", data);
+      const res = await apiRequest("POST", "/api/v1/auth/login", data);
       return await res.json();
     },
     onSuccess: () => {
@@ -85,7 +85,7 @@ export default function AuthPage() {
         title: "Login successful!",
         description: "Welcome back!"
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/auth/me"] });
       setLocation("/");
     },
     onError: (error: any) => {

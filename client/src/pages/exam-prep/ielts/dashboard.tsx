@@ -46,9 +46,9 @@ const MODULES = [
 export default function IELTSDashboard() {
   // Fetch user progress for IELTS modules
   const { data: progress } = useQuery({
-    queryKey: ["/api/ielts/progress"],
+    queryKey: ["/api/v1/ielts/progress"],
     queryFn: async () => {
-      const res = await fetch("/api/ielts/progress");
+      const res = await fetch("/api/v1/ielts/progress");
       if (!res.ok) return null;
       return res.json();
     },

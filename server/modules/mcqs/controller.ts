@@ -1,8 +1,5 @@
 import type { Request, Response } from "express";
 import {
-  getExamQuestionsWithFallback,
-  getExamQuestionsLegacy,
-  getExamQuestionById,
   getDailyChallenge,
   getDailyChallengeStats,
   createMCQ,
@@ -15,57 +12,6 @@ import {
 } from "./service";
 import { createMcqSchema, listMcqQuerySchema, updateMcqSchema } from "./schema";
 import { z } from "zod";
-
-export async function listExamQuestions(req: Request, res: Response) {
-  try {
-    const raw = req.query || {};
-    const subject = raw.category?.toString() || raw.subject?.toString();
-    const system = raw.system?.toString();
-    const difficulty = raw.difficulty?.toString();
-    const limit = raw.limit ? parseInt(raw.limit.toString()) : undefined;
-
-    const paramValue =
-      (req.params as any).examType || (req.params as any).examId;
-
-    if (!paramValue) {
-      return res
-        .status(400)
-        .json({ message: "Exam identifier missing in URL" });
-    }
-
-    const questions = await getExamQuestionsWithFallback(paramValue, {
-      subject,
-      system,
-      difficulty,
-      limit,
-    });
-
-    res.json(questions);
-  } catch (error) {
-    console.error("Failed to fetch exam questions:", error);
-    res.status(500).json({ message: "Server error", error });
-  }
-}
-
-export async function listLegacyExamQuestions(req: Request, res: Response) {
-  try {
-    const questions = await getExamQuestionsLegacy(req.params.examType);
-    res.json(questions);
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
-  }
-}
-
-export async function getQuestion(req: Request, res: Response) {
-  try {
-    const question = await getExamQuestionById(req.params.id);
-    if (!question)
-      return res.status(404).json({ message: "Question not found" });
-    res.json(question);
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
-  }
-}
 
 export async function dailyChallenge(req: Request, res: Response) {
   try {
@@ -153,7 +99,10 @@ export async function bulkUploadHandler(req: Request, res: Response) {
 export async function listMcqsHandler(req: Request, res: Response) {
   try {
     const query = listMcqQuerySchema.parse(req.query);
-    const result = await listMcqs(query);
+    const result = await listMcqs({
+      ...query,
+      userId: req.session.userId || null,
+    });
     res.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {

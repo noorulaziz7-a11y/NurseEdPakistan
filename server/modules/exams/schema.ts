@@ -41,3 +41,22 @@ export const listExamTopicQuerySchema = z.object({
   examId: z.coerce.number().int().positive().optional(),
   subjectId: z.string().min(1).optional(),
 });
+
+export const createAttemptFromQuestionsSchema = z.object({
+  examId: z.number().int().positive(),
+  questionIds: z.array(z.string().min(1)).min(1),
+  timeLimitSeconds: z.number().int().positive().optional(),
+});
+
+export const saveAttemptProgressSchema = z.object({
+  currentQuestionIndex: z.number().int().nonnegative().optional(),
+  timeRemainingSeconds: z.number().int().nonnegative().optional(),
+  answers: z
+    .array(
+      z.object({
+        mcqId: z.string().min(1),
+        selectedOptionIds: z.array(z.number().int().positive()).min(1),
+      })
+    )
+    .optional(),
+});

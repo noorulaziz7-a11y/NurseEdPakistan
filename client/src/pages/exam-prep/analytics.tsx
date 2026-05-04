@@ -34,9 +34,9 @@ const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 export default function AnalyticsPage() {
   const { data: analytics, isLoading } = useQuery({
-    queryKey: ["/api/analytics"],
+    queryKey: ["/api/v1/analytics"],
     queryFn: async () => {
-      const res = await fetch("/api/analytics");
+      const res = await fetch("/api/v1/analytics");
       if (!res.ok) return null;
       return res.json();
     },

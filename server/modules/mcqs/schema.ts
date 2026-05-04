@@ -12,6 +12,11 @@ export const mcqOptionSchema = z.union([
 export const createMcqSchema = z.object({
   question: z.string().min(1),
   explanation: z.string().nullable().optional(),
+  type: z.enum(["single", "multiple", "true_false"]).optional(),
+  imageUrl: z.string().min(1).nullable().optional(),
+  reference: z.string().min(1).nullable().optional(),
+  year: z.coerce.number().int().optional(),
+  rationaleType: z.enum(["detailed", "quick", "video"]).optional(),
   difficulty: z.enum(["easy", "moderate", "hard"]),
   options: z.array(mcqOptionSchema).min(2),
   correctIndex: z.number().int().nonnegative().optional(),
@@ -40,6 +45,24 @@ export const updateMcqSchema = createMcqSchema.partial();
 export const listMcqQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   pageSize: z.coerce.number().int().positive().max(100).optional(),
+  limit: z.coerce.number().int().positive().max(200).optional(),
+  random: z.preprocess(
+    (value) => (typeof value === "string" ? value === "true" : value),
+    z.boolean()
+  ).optional(),
+  adaptive: z.preprocess(
+    (value) => (typeof value === "string" ? value === "true" : value),
+    z.boolean()
+  ).optional(),
+  excludeAttempted: z.preprocess(
+    (value) => (typeof value === "string" ? value === "true" : value),
+    z.boolean()
+  ).optional(),
+  includeExplanation: z.preprocess(
+    (value) => (typeof value === "string" ? value === "true" : value),
+    z.boolean()
+  ).optional(),
+  search: z.string().min(1).optional(),
   difficulty: z.enum(["easy", "moderate", "hard"]).optional(),
   examId: z.coerce.number().int().positive().optional(),
   subjectId: z.string().min(1).optional(),
@@ -64,6 +87,11 @@ export const mcqCsvRowSchema = z.object({
   subject_id: z.string().min(1),
   topic_id: z.string().min(1).optional(),
   question: z.string().min(1),
+  type: z.enum(["single", "multiple", "true_false"]).optional(),
+  image_url: z.string().min(1).optional(),
+  reference: z.string().min(1).optional(),
+  year: z.coerce.number().int().optional(),
+  rationale_type: z.enum(["detailed", "quick", "video"]).optional(),
   option_a: z.string().min(1),
   option_b: z.string().min(1),
   option_c: z.string().min(1),

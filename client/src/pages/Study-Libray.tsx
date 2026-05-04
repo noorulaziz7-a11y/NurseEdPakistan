@@ -10,7 +10,7 @@ export default function StudyLibrary() {
   const [selectedCategory, setSelectedCategory] = useState("All Libraries");
 
   const { data: libraries, isLoading } = useQuery<Study[]>({
-    queryKey: ["/api/study-libraries", { category: selectedCategory }],
+    queryKey: ["/api/v1/study-libraries", { category: selectedCategory }],
   });
 
   const filteredLibraries = libraries?.filter(library => {

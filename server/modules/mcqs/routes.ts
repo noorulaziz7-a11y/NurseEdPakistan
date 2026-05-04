@@ -1,9 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
 import {
-  listExamQuestions,
-  listLegacyExamQuestions,
-  getQuestion,
   dailyChallenge,
   dailyChallengeStats,
   createMcqHandler,
@@ -21,12 +18,6 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-router.get(
-  ["/exams/:examType/questions", "/exams/:examId/questions"],
-  listExamQuestions
-);
-router.get("/exam-questions/:examType", listLegacyExamQuestions);
-router.get("/questions/:id", getQuestion);
 router.get("/daily-challenge/:examType", dailyChallenge);
 router.get("/daily-challenge/stats", dailyChallengeStats);
 

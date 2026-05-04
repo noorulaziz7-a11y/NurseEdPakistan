@@ -28,13 +28,13 @@ export default function PracticeTest() {
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<number>>(new Set());
 
   const { data: questions, isLoading } = useQuery<ExamQuestion[]>({
-    queryKey: ["/api/exam-questions", examType],
+    queryKey: ["/api/v1/exam-questions", examType],
     enabled: !!examType && !!config,
   });
 
   const submitTestMutation = useMutation({
     mutationFn: async (testData: any) => {
-      const response = await fetch("/api/practice-tests", {
+      const response = await fetch("/api/v1/practice-tests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(testData),
@@ -43,7 +43,7 @@ export default function PracticeTest() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/practice-tests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/v1/practice-tests"] });
       toast({
         title: "Test Completed!",
         description: "Your results have been saved.",

@@ -20,7 +20,7 @@ export default function Colleges() {
 
   // ✅ Fixed: Added queryFn to actually fetch data
   const { data: colleges, isLoading, error } = useQuery<College[]>({
-    queryKey: ["/api/colleges", selectedCity, selectedProgram],
+    queryKey: ["/api/v1/colleges", selectedCity, selectedProgram],
     queryFn: async () => {
       const params: Record<string, string> = {};
       if (selectedCity !== "All Cities") params.city = selectedCity;

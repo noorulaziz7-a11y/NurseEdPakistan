@@ -87,10 +87,27 @@ export const mcqSystemEnum = pgEnum("mcq_system_enum", [
   "Integumentary",
 ]);
 
+export const mcqTypeEnum = pgEnum("mcq_type_enum", [
+  "single",
+  "multiple",
+  "true_false",
+]);
+
+export const mcqRationaleTypeEnum = pgEnum("mcq_rationale_type_enum", [
+  "detailed",
+  "quick",
+  "video",
+]);
+
 export const mcqs = pgTable("mcqs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   question: text("question").notNull(),
   explanation: text("explanation"),
+  type: mcqTypeEnum("type").notNull().default("single"),
+  imageUrl: text("image_url"),
+  reference: text("reference"),
+  year: integer("year"),
+  rationaleType: mcqRationaleTypeEnum("rationale_type"),
   examId: integer("exam_id")
     .notNull()
     .references(() => exams.id, { onDelete: "cascade" }),
@@ -166,6 +183,7 @@ export const attemptAnswers = pgTable(
       .notNull()
       .references(() => mcqs.id, { onDelete: "cascade" }),
     selectedOptionId: integer("selected_option_id").references(() => mcqOptions.id),
+    selectedOptionIds: jsonb("selected_option_ids"),
     isCorrect: boolean("is_correct").default(false),
     answeredAt: timestamp("answered_at").defaultNow(),
   },

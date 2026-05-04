@@ -1,5 +1,4 @@
 import type { Request, Response } from "express";
-import { storage } from "../../storage";
 import {
   getAllExams,
   getExamById,
@@ -20,10 +19,12 @@ import {
   removeMcqFromExam,
   listExamMcqs,
   startExamAttempt,
+  createAttemptFromQuestions,
   getAttemptResume,
   createAttempt,
   getAttempt,
   saveAnswer,
+  saveAttemptProgress,
   submitAttempt,
   calculateResultSummary,
 } from "./service";
@@ -37,6 +38,8 @@ import {
   createExamTopicSchema,
   updateExamTopicSchema,
   listExamTopicQuerySchema,
+  createAttemptFromQuestionsSchema,
+  saveAttemptProgressSchema,
 } from "./schema";
 
 export async function listExams(_req: Request, res: Response) {
@@ -44,12 +47,7 @@ export async function listExams(_req: Request, res: Response) {
     const exams = await getAllExams();
     res.json(exams);
   } catch (error) {
-    try {
-      const fallback = await storage.getAllExams();
-      res.json(fallback);
-    } catch {
-      res.status(500).json({ message: "Server error", error });
-    }
+    res.status(500).json({ message: "Server error", error });
   }
 }
 
@@ -461,10 +459,70 @@ export async function resumeAttemptHandler(req: Request, res: Response) {
     }
 
     res.json({
+      questions: result.questions.map(sanitizeMcq),
       unansweredQuestions: result.unanswered.map(sanitizeMcq),
       remainingTime: result.attempt.timeRemainingSeconds ?? null,
       savedAnswers: result.answers,
+      currentQuestionIndex: result.attempt.currentQuestionIndex ?? 0,
     });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+}
+
+export async function createAttemptFromQuestionsHandler(
+  req: Request,
+  res: Response
+) {
+  try {
+    const payload = createAttemptFromQuestionsSchema.parse(req.body);
+    const attempt = await createAttemptFromQuestions({
+      examId: payload.examId,
+      questionIds: payload.questionIds,
+      timeLimitSeconds: payload.timeLimitSeconds ?? null,
+      userId: req.session.userId || null,
+    });
+    if (!attempt) {
+      return res.status(404).json({ message: "No questions found for exam" });
+    }
+    res.status(201).json(attempt);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Server error", error });
+  }
+}
+
+export async function saveAttemptProgressHandler(
+  req: Request,
+  res: Response
+) {
+  try {
+    const payload = saveAttemptProgressSchema.parse(req.body);
+    const result = await saveAttemptProgress({
+      attemptId: req.params.id,
+      currentQuestionIndex: payload.currentQuestionIndex,
+      timeRemainingSeconds: payload.timeRemainingSeconds ?? null,
+      answers: payload.answers,
+    });
+    res.json(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Server error", error });
+  }
+}
+
+export async function resumeAttemptStateHandler(
+  req: Request,
+  res: Response
+) {
+  try {
+    const attempt = await getAttempt(req.params.id);
+    if (!attempt) return res.status(404).json({ message: "Attempt not found" });
+    res.json(attempt);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }

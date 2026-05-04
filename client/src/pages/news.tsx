@@ -6,12 +6,12 @@ import type { NewsArticle } from "@shared/browser";
 
 export default function News() {
   const { data: featuredArticles, isLoading: featuredLoading } = useQuery<NewsArticle[]>({
-    queryKey: ["/api/news", { featured: true, limit: 1 }],
+    queryKey: ["/api/v1/news", { featured: true, limit: 1 }],
     // Get the first featured article
   });
 
   const { data: recentArticles, isLoading: recentLoading } = useQuery<NewsArticle[]>({
-    queryKey: ["/api/news", { featured: false }],
+    queryKey: ["/api/v1/news", { featured: false }],
   });
 
   return (

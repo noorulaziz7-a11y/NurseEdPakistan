@@ -1,481 +1,395 @@
-// Modern iOS-inspired Quiz Page
-import { useMemo, useState, useEffect } from "react";
-import { useParams, useLocation, Link } from "wouter";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Progress } from "@/shared/ui/progress";
 import { Badge } from "@/shared/ui/badge";
+import { Checkbox } from "@/shared/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
 import { Label } from "@/shared/ui/label";
-import { Clock, ArrowLeft, ArrowRight, Bookmark, CheckCircle2, XCircle, Lightbulb } from "lucide-react";
+import { 
+  Clock, 
+  ArrowLeft, 
+  ArrowRight, 
+  CheckCircle2, 
+  XCircle, 
+  AlertCircle,
+  Loader2,
+  Flag
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import AuthModal from "@/components/auth/AuthModal";
-import { getExams, getMCQs, type McqDifficulty, type McqSystem } from "@/modules/mcqs/services/mcqApi";
-import { exams as examDirectory } from "@/pages/exam-prep/exam-data";
+import { 
+  resumeAttempt, 
+  saveAttemptProgress,
+  submitAttempt,
+  type AttemptAnswerRecord 
+} from "@/modules/exams/services/attemptApi";
+
+/* -------------------- TYPES -------------------- */
+
+interface QuestionOption {
+  id: number;
+  optionText: string;
+  isCorrect?: boolean;
+}
 
 interface Question {
   id: string;
   question: string;
-  options: string[];
-  correctAnswer: string;
+  options: QuestionOption[];
   explanation: string;
   difficulty: string;
   category: string;
+  type: "single" | "multiple" | "true_false";
+  imageUrl?: string | null;
+  reference?: string | null;
 }
+
+type QuizAnswerMap = Record<string, number[]>;
+
+/* -------------------- HELPERS -------------------- */
+
+const formatTime = (s: number) =>
+  `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+
+/* -------------------- COMPONENT -------------------- */
 
 export default function QuizPage() {
   const { examId } = useParams<{ examId: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user } = useAuth();
+
+  // 1. State Management
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<QuizAnswerMap>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 2. Extract Attempt ID from URL
   const searchParams = new URLSearchParams(window.location.search);
+  const attemptId = searchParams.get("attemptId");
 
-  const subjectId = searchParams.get("subjectId") || "";
-  const topicId = searchParams.get("topicId") || "";
-  const examIdFromQuery = Number(searchParams.get("examId") || "");
-  const legacyMode = searchParams.get("legacy") === "1";
-  const legacySubject = searchParams.get("subject") || "";
-  const system = searchParams.get("system") as McqSystem | null;
-  const difficulty = (searchParams.get("difficulty") || "moderate") as McqDifficulty;
-  const questionCount = parseInt(searchParams.get("count") || "25");
-
-  const { data: apiExams = [] } = useQuery({
-    queryKey: ["/api/v1/exams"],
-    queryFn: getExams,
-  });
-
-  const resolvedExamId = useMemo(() => {
-    if (Number.isFinite(examIdFromQuery)) return examIdFromQuery;
-    const parsed = examId ? Number(examId) : NaN;
-    if (Number.isFinite(parsed)) return parsed;
-    const slugExam = examDirectory.find((exam) => exam.id === examId);
-    if (!slugExam) return null;
-    const match = apiExams.find((exam) => {
-      const apiName = exam?.name?.toLowerCase?.();
-      const slugName = slugExam.name.toLowerCase();
-      return apiName ? apiName === slugName : false;
-    });
-    return match?.id ?? null;
-  }, [examId, examIdFromQuery, apiExams]);
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
-  const [showExplanation, setShowExplanation] = useState(false);
-  const [timeSpent, setTimeSpent] = useState(0);
-  const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<number>>(new Set());
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [guestQuizCount, setGuestQuizCount] = useState(0);
-
-  const shouldUseLegacy = legacyMode || !resolvedExamId;
-
-  // Fetch questions
-  const { data: questions = [], isLoading } = useQuery<Question[]>({
-    queryKey: shouldUseLegacy
-      ? [
-          "/api/exams",
-          examId,
-          {
-            subject: legacySubject || undefined,
-            difficulty,
-            system: system || undefined,
-            limit: questionCount,
-          },
-        ]
-      : [
-          "/api/v1/mcqs",
-          {
-            examId: resolvedExamId ?? undefined,
-            subjectId: subjectId || undefined,
-            topicId: topicId || undefined,
-            difficulty,
-            system: system || undefined,
-            page: 1,
-            pageSize: questionCount,
-          },
-        ],
-    queryFn: async () => {
-      if (shouldUseLegacy) {
-        if (!examId) return [];
-        const params = new URLSearchParams({
-          difficulty,
-          limit: questionCount.toString(),
-        });
-        if (legacySubject) {
-          params.append("category", legacySubject);
-        }
-        if (system) {
-          params.append("system", system);
-        }
-        const res = await fetch(`/api/exams/${examId}/questions?${params.toString()}`);
-        if (!res.ok) throw new Error("Failed to fetch questions");
-        return res.json();
-      }
-
-      if (!resolvedExamId || !subjectId) {
-        return [];
-      }
-      const response = await getMCQs({
-        page: 1,
-        pageSize: questionCount,
-        examId: resolvedExamId,
-        subjectId: subjectId || undefined,
-        topicId: topicId || undefined,
-        difficulty,
-        system: system || undefined,
-      });
-
-      return response.data.map((mcq) => ({
-        id: mcq.id,
-        question: mcq.question,
-        options: (mcq.options || []).map((option) => option.optionText),
-        correctAnswer:
-          mcq.options?.find((option) => option.isCorrect)?.optionText || "",
-        explanation: mcq.explanation || "",
-        difficulty: mcq.difficulty,
-        category: subjectId || "",
-      }));
-    },
-  });
-
-  if (!resolvedExamId && !legacyMode) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="max-w-md w-full p-6 text-center">
-          <CardContent>
-            <h2 className="text-xl font-semibold mb-2">Exam not found</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Please go back and select a valid exam.
-            </p>
-            <Button onClick={() => setLocation("/exam-prep")}>Back to Exam Prep</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!subjectId && !legacyMode) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="max-w-md w-full p-6 text-center">
-          <CardContent>
-            <h2 className="text-xl font-semibold mb-2">Select a subject</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Choose a subject before starting your quiz.
-            </p>
-            <Button onClick={() => setLocation(`/exam-prep/${examId}/quizzes/setup`)}>
-              Back to Setup
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Timer
+  // 3. Fetch Questions and Resume State
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeSpent((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+    let isMounted = true;
 
-  // Check guest limit
-  useEffect(() => {
-    if (!user) {
-      const stored = localStorage.getItem("guestQuizCount");
-      const count = stored ? parseInt(stored) : 0;
-      setGuestQuizCount(count);
-      if (count >= 5) {
-        setShowAuthModal(true);
-      }
-    }
-  }, [user]);
-
-  const currentQuestion = questions[currentIndex];
-  const selectedAnswer = selectedAnswers[currentIndex];
-  const isCorrect = selectedAnswer === currentQuestion?.correctAnswer;
-  const progress = ((currentIndex + 1) / questions.length) * 100;
-
-  const handleAnswerSelect = (answer: string) => {
-    if (showExplanation) return;
-    setSelectedAnswers((prev) => ({ ...prev, [currentIndex]: answer }));
-    setShowExplanation(true);
-  };
-
-  const handleNext = () => {
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-      setShowExplanation(false);
-    } else {
-      handleSubmit();
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-      setShowExplanation(false);
-    }
-  };
-
-  const handleBookmark = () => {
-    setBookmarkedQuestions((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(currentIndex)) {
-        newSet.delete(currentIndex);
-      } else {
-        newSet.add(currentIndex);
-      }
-      return newSet;
-    });
-  };
-
-  const handleSubmit = async () => {
-    if (!user) {
-      const newCount = guestQuizCount + 1;
-      localStorage.setItem("guestQuizCount", newCount.toString());
-      setGuestQuizCount(newCount);
-      if (newCount >= 5) {
-        setShowAuthModal(true);
+    async function loadQuiz() {
+      if (!attemptId) {
+        setError("Missing Attempt ID. Please start the quiz from the setup page.");
+        setLoading(false);
         return;
       }
+
+      try {
+        setLoading(true);
+        const data = await resumeAttempt(attemptId);
+        
+        if (isMounted) {
+          setQuestions(data.questions);
+          setCurrentQuestionIndex(data.currentQuestionIndex || 0);
+          setTimeRemaining(data.remainingTime);
+          
+          // Map saved answers to our state format
+          const savedMap: QuizAnswerMap = {};
+          data.savedAnswers.forEach((ans: AttemptAnswerRecord) => {
+            savedMap[ans.mcqId] = ans.selectedOptionIds || (ans.selectedOptionId ? [ans.selectedOptionId] : []);
+          });
+          setSelectedAnswers(savedMap);
+          setError(null);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err.message || "Failed to load quiz data.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     }
 
-    const correctCount = questions.reduce((acc, q, idx) => {
-      return acc + (selectedAnswers[idx] === q.correctAnswer ? 1 : 0);
-    }, 0);
+    loadQuiz();
 
-    const result = {
-      examId,
-      examType: examId,
-      totalQuestions: questions.length,
-      correctAnswers: correctCount,
-      incorrectAnswers: questions.length - correctCount,
-      score: Math.round((correctCount / questions.length) * 100),
-      timeSpent,
-      answers: questions.map((q, idx) => ({
-        questionId: q.id,
-        selectedAnswer: selectedAnswers[idx],
-        correct: selectedAnswers[idx] === q.correctAnswer,
-      })),
+    return () => {
+      isMounted = false;
     };
+  }, [attemptId]);
 
-    // Save result
-    try {
-      await fetch("/api/quiz/results", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(result),
+  // 4. Timer Logic
+  useEffect(() => {
+    if (timeRemaining === null || timeRemaining <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev !== null && prev > 0) return prev - 1;
+        clearInterval(timer);
+        return 0;
       });
-    } catch (error) {
-      console.error("Failed to save result:", error);
-    }
+    }, 1000);
 
-    // Navigate to results
-    setLocation(`/exam-prep/${examId}/quiz/result?score=${result.score}&correct=${correctCount}&total=${questions.length}&time=${timeSpent}`);
+    return () => clearInterval(timer);
+  }, [timeRemaining]);
+
+  // 5. Navigation Handlers
+  const handleNext = useCallback(() => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+    }
+  }, [currentQuestionIndex, questions.length]);
+
+  const handlePrevious = useCallback(() => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex((prev) => prev - 1);
+    }
+  }, [currentQuestionIndex]);
+
+  // 6. Answer Selection Handler
+  const handleSelectAnswer = (optionId: number) => {
+    const question = questions[currentQuestionIndex];
+    if (!question) return;
+
+    setSelectedAnswers((prev) => {
+      const current = prev[question.id] || [];
+      let next: number[];
+
+      if (question.type === "multiple") {
+        next = current.includes(optionId)
+          ? current.filter((id) => id !== optionId)
+          : [...current, optionId];
+      } else {
+        next = [optionId];
+      }
+
+      // Proactively save progress
+      saveAttemptProgress(attemptId!, {
+        currentQuestionIndex,
+        timeRemainingSeconds: timeRemaining,
+        answers: [{ mcqId: question.id, selectedOptionIds: next }]
+      }).catch(err => console.error("Failed to save progress", err));
+
+      return { ...prev, [question.id]: next };
+    });
   };
 
-  if (isLoading) {
+  // 7. Submit Handler
+  const handleSubmit = async () => {
+    if (!attemptId) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Calculate time spent
+      const timeSpent = timeRemaining !== null 
+        ? (questions.length * 60) - timeRemaining 
+        : undefined;
+
+      // 1. Final progress save
+      await saveAttemptProgress(attemptId, {
+        currentQuestionIndex,
+        timeRemainingSeconds: timeRemaining,
+        answers: Object.entries(selectedAnswers).map(([mcqId, ids]) => ({
+          mcqId,
+          selectedOptionIds: ids
+        }))
+      });
+
+      // 2. Submit attempt to backend
+      const { result, summary } = await submitAttempt(attemptId, timeSpent);
+
+      // 3. Redirect to results with summary data
+      const params = new URLSearchParams({
+        attemptId,
+        score: String(summary.score),
+        correct: String(summary.correctAnswers),
+        total: String(summary.totalQuestions),
+        time: String(timeSpent || 0)
+      });
+
+      setLocation(`/exam-prep/${examId}/quiz/result?${params.toString()}`);
+    } catch (err: any) {
+      toast({
+        title: "Submission failed",
+        description: err.message || "Could not save your final answers.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 8. Render States
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading questions...</p>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
+        <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+        <h2 className="text-xl font-semibold text-slate-700">Loading your exam...</h2>
+        <p className="text-slate-500">Preparing your practice session</p>
       </div>
     );
   }
 
-  if (questions.length === 0) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex items-center justify-center">
-        <Card className="max-w-md p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4">No questions found</h2>
-          <p className="text-gray-600 mb-6">Please try adjusting your filters.</p>
-          <Link href={`/exam-prep/${examId}/quizzes`}>
-            <Button>Go Back</Button>
-          </Link>
-        </Card>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+          <AlertCircle className="w-10 h-10 text-red-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Oops! Something went wrong</h2>
+        <p className="text-slate-600 max-w-md mb-6">{error}</p>
+        <Button onClick={() => window.location.reload()} className="bg-slate-900">
+          Try Again
+        </Button>
       </div>
     );
   }
+
+  const currentQuestion = questions[currentQuestionIndex];
+  if (!currentQuestion) return null;
+
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const currentSelections = selectedAnswers[currentQuestion.id] || [];
 
   return (
-    <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/20">
-        {/* Sticky Header */}
-        <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200 shadow-sm">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href={`/exam-prep/${examId}/quizzes`}>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <ArrowLeft className="w-5 h-5" />
-                  </Button>
-                </Link>
-                <div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock className="w-4 h-4" />
-                    <span>{Math.floor(timeSpent / 60)}:{(timeSpent % 60).toString().padStart(2, "0")}</span>
-                  </div>
-                </div>
+    <div className="min-h-screen bg-slate-50 pb-20">
+      {/* Header / Nav */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setLocation("/exam-prep")}
+            className="text-slate-600"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Exit
+          </Button>
+
+          <div className="flex items-center gap-4">
+            {timeRemaining !== null && (
+              <div className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-bold border border-blue-100">
+                <Clock className="w-4 h-4 mr-2" />
+                {formatTime(timeRemaining)}
               </div>
-              <div className="flex items-center gap-4">
-                <Badge variant="outline" className="px-3 py-1">
-                  Question {currentIndex + 1} of {questions.length}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleBookmark}
-                  className={`rounded-full ${bookmarkedQuestions.has(currentIndex) ? "text-yellow-500" : ""}`}
-                >
-                  <Bookmark className={`w-5 h-5 ${bookmarkedQuestions.has(currentIndex) ? "fill-current" : ""}`} />
-                </Button>
-              </div>
-            </div>
-            <Progress value={progress} className="mt-4 h-2" />
+            )}
+            <Badge variant="outline" className="bg-slate-100">
+              Question {currentQuestionIndex + 1} of {questions.length}
+            </Badge>
           </div>
+
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="bg-slate-900"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Submitting..." : "Finish"}
+          </Button>
         </div>
-
-        {/* Question Content */}
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card className="border-0 shadow-xl rounded-3xl bg-white/80 backdrop-blur-xl overflow-hidden">
-                <CardContent className="p-8">
-                  {/* Question */}
-                  <div className="mb-8">
-                    <div className="flex items-start gap-3 mb-4">
-                      <Badge className="bg-blue-100 text-blue-700">
-                        {currentQuestion.difficulty}
-                      </Badge>
-                      <Badge variant="outline">{currentQuestion.category}</Badge>
-                    </div>
-                    <h2 className="text-2xl font-semibold text-gray-900 leading-relaxed">
-                      {currentQuestion.question}
-                    </h2>
-                  </div>
-
-                  {/* Options */}
-                  <RadioGroup
-                    value={selectedAnswer}
-                    onValueChange={handleAnswerSelect}
-                    disabled={showExplanation}
-                  >
-                    <div className="space-y-3">
-                      {currentQuestion.options.map((option, idx) => {
-                        const isSelected = selectedAnswer === option;
-                        const isCorrectOption = option === currentQuestion.correctAnswer;
-                        const showResult = showExplanation && (isSelected || isCorrectOption);
-
-                        return (
-                          <motion.div
-                            key={idx}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.05 }}
-                          >
-                            <Label
-                              htmlFor={`option-${idx}`}
-                              className={`flex items-center gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all ${showResult
-                                  ? isCorrectOption
-                                    ? "bg-green-50 border-green-500"
-                                    : isSelected
-                                      ? "bg-red-50 border-red-500"
-                                      : ""
-                                  : isSelected
-                                    ? "bg-blue-50 border-blue-500"
-                                    : "bg-gray-50 border-gray-200 hover:border-gray-300"
-                                } ${showExplanation ? "pointer-events-none" : ""}`}
-                            >
-                              <RadioGroupItem
-                                value={option}
-                                id={`option-${idx}`}
-                                className="flex-shrink-0"
-                              />
-                              <span className="flex-1 text-lg font-medium">{option}</span>
-                              {showResult && (
-                                <motion.div
-                                  initial={{ scale: 0 }}
-                                  animate={{ scale: 1 }}
-                                  className="flex-shrink-0"
-                                >
-                                  {isCorrectOption ? (
-                                    <CheckCircle2 className="w-6 h-6 text-green-600" />
-                                  ) : isSelected ? (
-                                    <XCircle className="w-6 h-6 text-red-600" />
-                                  ) : null}
-                                </motion.div>
-                              )}
-                            </Label>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </RadioGroup>
-
-                  {/* Explanation */}
-                  {showExplanation && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-6 p-6 bg-blue-50 rounded-2xl border border-blue-200"
-                    >
-                      <div className="flex items-start gap-3">
-                        <Lightbulb className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h3 className="font-semibold text-blue-900 mb-2">Explanation</h3>
-                          <p className="text-blue-800 leading-relaxed">{currentQuestion.explanation}</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Navigation */}
-              <div className="flex items-center justify-between mt-6">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentIndex === 0}
-                  className="rounded-2xl px-6"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Previous
-                </Button>
-                <Button
-                  onClick={handleNext}
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-8 py-6 text-lg font-semibold shadow-lg"
-                >
-                  {currentIndex === questions.length - 1 ? "Submit Quiz" : "Next"}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
+        <Progress value={progress} className="h-1 rounded-none bg-slate-100" />
       </div>
 
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          message="You've reached the guest quiz limit. Please sign up to continue practicing!"
-        />
-      )}
-    </>
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentQuestion.id}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Card className="border-none shadow-xl rounded-3xl overflow-hidden bg-white">
+              <CardContent className="p-8">
+                {/* Difficulty & Type */}
+                <div className="flex items-center gap-2 mb-6">
+                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none capitalize">
+                    {currentQuestion.difficulty}
+                  </Badge>
+                  <Badge variant="outline" className="text-slate-500 border-slate-200">
+                    {currentQuestion.type === "multiple" ? "Multiple Choice" : "Single Choice"}
+                  </Badge>
+                </div>
+
+                {/* Question Text */}
+                <h2 className="text-2xl font-semibold text-slate-900 mb-8 leading-tight">
+                  {currentQuestion.question}
+                </h2>
+
+                {/* Options */}
+                <div className="space-y-4">
+                  {currentQuestion.options.map((option) => {
+                    const isSelected = currentSelections.includes(option.id);
+                    
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => handleSelectAnswer(option.id)}
+                        className={`w-full text-left p-5 rounded-2xl border-2 transition-all flex items-start gap-4 ${
+                          isSelected
+                            ? "border-blue-600 bg-blue-50/50 shadow-sm"
+                            : "border-slate-100 hover:border-blue-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className={`mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                          isSelected ? "border-blue-600 bg-blue-600" : "border-slate-300"
+                        }`}>
+                          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                        </div>
+                        <span className={`text-lg ${isSelected ? "text-blue-900 font-medium" : "text-slate-700"}`}>
+                          {option.optionText}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* Footer Controls */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handlePrevious}
+            disabled={currentQuestionIndex === 0}
+            className="flex-1 h-14 rounded-2xl border-slate-200"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Previous
+          </Button>
+
+          <Button
+            variant="default"
+            size="lg"
+            onClick={currentQuestionIndex === questions.length - 1 ? handleSubmit : handleNext}
+            disabled={isSubmitting}
+            className={`flex-1 h-14 rounded-2xl shadow-lg transition-all ${
+              currentQuestionIndex === questions.length - 1 
+                ? "bg-green-600 hover:bg-green-700 shadow-green-100" 
+                : "bg-slate-900 shadow-slate-200"
+            }`}
+          >
+            {currentQuestionIndex === questions.length - 1 ? (
+              isSubmitting ? "Submitting..." : "Finish Quiz"
+            ) : (
+              "Next"
+            )}
+            {currentQuestionIndex === questions.length - 1 ? (
+              isSubmitting ? <Loader2 className="w-5 h-5 ml-2 animate-spin" /> : <CheckCircle2 className="w-5 h-5 ml-2" />
+            ) : (
+              <ArrowRight className="w-5 h-5 ml-2" />
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
-

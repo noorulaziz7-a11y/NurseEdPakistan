@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Get current user
   const { data: authData, isLoading } = useQuery({
-    queryKey: ["/api/auth/me"],
+    queryKey: ["/api/v1/auth/me"],
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
   });
@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/auth/logout");
+      const res = await apiRequest("POST", "/api/v1/auth/logout");
       return await res.json();
     },
     onSuccess: () => {

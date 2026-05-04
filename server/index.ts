@@ -20,9 +20,7 @@ if (app.get("env") === "development" && process.env.DATABASE_URL) {
 }
 
 app.use((req, res, next) => {
-  const isWebhook =
-    req.originalUrl.startsWith("/api/v1/subscriptions/webhook") ||
-    req.originalUrl.startsWith("/api/subscriptions/webhook");
+  const isWebhook = req.originalUrl.startsWith("/api/v1/subscriptions/webhook");
   if (isWebhook) {
     return express.raw({ type: "application/json" })(req, res, next);
   }
@@ -36,10 +34,9 @@ const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 120,
   standardHeaders: true,
-  legacyHeaders: false,
 });
-app.use("/api", apiLimiter);
-app.use("/api", cacheMiddleware({ ttlSeconds: 60 }));
+app.use("/api/v1", apiLimiter);
+app.use("/api/v1", cacheMiddleware({ ttlSeconds: 60 }));
 
 // Development CORS (allow frontend dev server origins)
 if (app.get("env") === "development") {
@@ -78,7 +75,7 @@ app.use((req, res, next) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
+    if (path.startsWith("/api/v1")) {
       const logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       console.log(logLine);
     }

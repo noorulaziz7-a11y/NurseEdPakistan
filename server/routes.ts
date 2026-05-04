@@ -35,9 +35,8 @@ export async function registerRoutes(app: express.Express) {
     router.use(moduleRouter);
   });
 
-  // Versioned API (preferred) + legacy path for backward compatibility
+  // Versioned API (preferred)
   app.use("/api/v1", router);
-  app.use("/api", router);
 
   return router;
 }

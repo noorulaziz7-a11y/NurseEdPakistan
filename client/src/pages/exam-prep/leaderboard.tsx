@@ -25,13 +25,13 @@ export default function LeaderboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState("All Time");
 
   const { data: leaderboard = [], isLoading } = useQuery<LeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard", selectedExam, selectedPeriod],
+    queryKey: ["/api/v1/leaderboard", selectedExam, selectedPeriod],
     queryFn: async () => {
       const params = new URLSearchParams({
         examType: selectedExam === "All" ? "" : selectedExam,
         period: selectedPeriod,
       });
-      const res = await fetch(`/api/leaderboard?${params.toString()}`);
+      const res = await fetch(`/api/v1/leaderboard?${params.toString()}`);
       if (!res.ok) return [];
       return res.json();
     },

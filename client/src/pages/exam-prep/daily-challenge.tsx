@@ -38,18 +38,18 @@ export default function DailyChallengePage() {
   const [today, setToday] = useState(new Date().toISOString().split("T")[0]);
 
   const { data: challenge, isLoading } = useQuery<DailyChallenge>({
-    queryKey: ["/api/daily-challenge", today],
+    queryKey: ["/api/v1/daily-challenge", today],
     queryFn: async () => {
-      const res = await fetch(`/api/daily-challenge?date=${today}`);
+      const res = await fetch(`/api/v1/daily-challenge?date=${today}`);
       if (!res.ok) return null;
       return res.json();
     },
   });
 
   const { data: stats } = useQuery({
-    queryKey: ["/api/daily-challenge/stats"],
+    queryKey: ["/api/v1/daily-challenge/stats"],
     queryFn: async () => {
-      const res = await fetch("/api/daily-challenge/stats");
+      const res = await fetch("/api/v1/daily-challenge/stats");
       if (!res.ok) return { streak: 0, totalCompleted: 0, averageScore: 0 };
       return res.json();
     },

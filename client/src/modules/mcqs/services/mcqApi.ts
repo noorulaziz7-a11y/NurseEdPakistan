@@ -15,6 +15,9 @@ export type McqSystem =
   | "Immune"
   | "Integumentary";
 
+export type McqType = "single" | "multiple" | "true_false";
+export type McqRationaleType = "detailed" | "quick" | "video";
+
 export type McqOptionInput =
   | string
   | {
@@ -29,6 +32,11 @@ export type McqPayload = {
   topicId?: string | null;
   difficulty: McqDifficulty;
   system: McqSystem;
+  type?: McqType;
+  imageUrl?: string | null;
+  reference?: string | null;
+  year?: number | null;
+  rationaleType?: McqRationaleType | null;
   question: string;
   explanation?: string | null;
   options: McqOptionInput[];
@@ -46,6 +54,11 @@ export type Mcq = {
   topicId?: string | null;
   difficulty: McqDifficulty;
   system: McqSystem;
+  type?: McqType;
+  imageUrl?: string | null;
+  reference?: string | null;
+  year?: number | null;
+  rationaleType?: McqRationaleType | null;
   createdBy?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -100,6 +113,12 @@ export type ExamTopic = {
 export async function getMCQs(params?: {
   page?: number;
   pageSize?: number;
+  limit?: number;
+  random?: boolean;
+  adaptive?: boolean;
+  excludeAttempted?: boolean;
+  includeExplanation?: boolean;
+  search?: string;
   examId?: number;
   subjectId?: string;
   topicId?: string;
@@ -107,6 +126,11 @@ export async function getMCQs(params?: {
   system?: McqSystem;
 }) {
   const res = await apiClient.get<McqListResponse>(endpoints.mcqs, { params });
+  return res.data;
+}
+
+export async function getMCQ(id: string) {
+  const res = await apiClient.get<McqListItem>(`${endpoints.mcqs}/${id}`);
   return res.data;
 }
 
@@ -141,13 +165,8 @@ export async function bulkUploadMCQs(file: File) {
 }
 
 export async function getExams() {
-  try {
-    const res = await apiClient.get<Exam[]>("/api/v1/exams");
-    return res.data;
-  } catch {
-    const res = await apiClient.get<Exam[]>("/api/exams");
-    return res.data;
-  }
+  const res = await apiClient.get<Exam[]>("/api/v1/exams");
+  return res.data;
 }
 
 export async function getExamSubjects(examId: number) {
