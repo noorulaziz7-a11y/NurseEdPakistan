@@ -1,29 +1,59 @@
-version: "3.9"
+version: '3.8'
 
 services:
-  app:
-    build: .
-    ports:
-      - "5000:5000"
-    env_file:
-      - ./env/docker.env
-    depends_on:
-      - db
-      - redis
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: nursing
-      POSTGRES_PASSWORD: nursing
-      POSTGRES_DB: nursing_educator
-    ports:
-      - "5432:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
+  # Redis for session caching and rate limiting
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # PostgreSQL database (Neon-compatible local dev DB)
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: nurse
+      POSTGRES_PASSWORD: nurse_password
+      POSTGRES_DB: nursing_educator_hub
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nurse -d nursing_educator_hub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Main application server
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DATABASE_URL: postgres://nurse:nurse_password@postgres:5432/nursing_educator_hub
+      REDIS_URL: redis://redis:6379
+      SESSION_SECRET: nursing-education-app-dev-secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: npm run dev:server
 
 volumes:
-  pg_data:
+  postgres_data:
+  redis_data:

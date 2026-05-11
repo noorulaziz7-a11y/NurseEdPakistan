@@ -709,6 +709,36 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+/* ---------------- SPECIALTY TRACKS (Phase 2) ---------------- */
+export const specialties = pgTable("specialties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  icon: text("icon"), // lucide-react icon name
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const specialtyModules = pgTable("specialty_modules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  specialtyId: varchar("specialty_id").notNull().references(() => specialties.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content").notNull(), // Markdown or JSON
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userSpecialtyProgress = pgTable("user_specialty_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  specialtyId: varchar("specialty_id").notNull().references(() => specialties.id, { onDelete: "cascade" }),
+  completedModules: jsonb("completed_modules").default([]),
+  lastAccessedAt: timestamp("last_accessed_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("user_specialty_unique").on(table.userId, table.specialtyId),
+]);
+
 export const refreshTokens = pgTable("refresh_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
@@ -717,6 +747,22 @@ export const refreshTokens = pgTable("refresh_tokens", {
   revokedAt: timestamp("revoked_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+/* ---------------- PERFORMANCE ANALYTICS ---------------- */
+export const performanceMetrics = pgTable("performance_metrics", {
+  id: serial("id").primaryKey(),
+  path: text("path").notNull(),
+  method: text("method").notNull(),
+  statusCode: integer("status_code").notNull(),
+  durationMs: integer("duration_ms").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("performance_metrics_path_idx").on(table.path),
+  index("performance_metrics_created_at_idx").on(table.createdAt),
+]);
 
 export const auditLogs = pgTable("audit_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

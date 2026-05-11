@@ -33,6 +33,7 @@ import IELTSSpeaking from "@/pages/exam-prep/ielts/speaking";
 import ResourcesPage from "@/pages/exam-prep/resources";
 import ProgressPage from "@/pages/exam-prep/progress";
 import GuidePage from "@/pages/exam-prep/guide";
+import SpecialtyTracksPage from "@/pages/exam-prep/specialties/index";
 
 // New pages
 import Dashboard from "@/pages/dashboard";
@@ -88,6 +89,7 @@ export const routes = [
   { path: "/exam-prep/:examId/resources", component: ResourcesPage },
   { path: "/exam-prep/:examId/progress", component: ProgressPage },
   { path: "/exam-prep/:examId/guide", component: GuidePage },
+  { path: "/exam-prep/specialties", component: SpecialtyTracksPage },
 
   // 🧠 Dynamic exam home (must be last to avoid route conflicts)
   { path: "/exam-prep/:examId", component: DynamicExamPage },

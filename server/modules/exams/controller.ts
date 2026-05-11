@@ -27,6 +27,7 @@ import {
   saveAttemptProgress,
   submitAttempt,
   calculateResultSummary,
+  getAdaptiveNextQuestion,
 } from "./service";
 import { z } from "zod";
 import {
@@ -41,6 +42,37 @@ import {
   createAttemptFromQuestionsSchema,
   saveAttemptProgressSchema,
 } from "./schema";
+
+export async function getAdaptiveNextQuestionHandler(req: Request, res: Response) {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const payload = z.object({
+      examId: z.number(),
+      currentDifficultyId: z.number(),
+      excludeMcqIds: z.array(z.string()).default([]),
+    }).parse(req.body);
+
+    const question = await getAdaptiveNextQuestion({
+      userId,
+      examId: payload.examId,
+      currentDifficultyId: payload.currentDifficultyId,
+      excludeMcqIds: payload.excludeMcqIds,
+    });
+
+    if (!question) {
+      return res.status(404).json({ message: "No more questions available" });
+    }
+
+    res.json(question);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Server error", error });
+  }
+}
 
 export async function listExams(_req: Request, res: Response) {
   try {

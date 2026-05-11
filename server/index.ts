@@ -1,22 +1,80 @@
-
 import "dotenv/config";
 
 import http from "http";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import pino from "pino";
+import pinoHttp from "pino-http";
 import { registerRoutes } from "./routes";
 import { registerSeoRoutes } from "./seo";
 import { cacheMiddleware } from "./cache";
-// vite middleware is imported dynamically later to avoid linking issues during server-only runs
+import { pool, db } from "./db";
+import { performanceMetrics } from "@shared/schema";
+import { optimizeDatabase } from "./modules/exams/service";
+import { randomUUID } from "crypto";
 
 const app = express();
+const PostgresStore = connectPgSimple(session);
+
+// Initialize Pino logger (NDJSON structured logs)
+const logger = pino({
+  level: process.env.LOG_LEVEL || "info",
+  redact: {
+    paths: ["req.headers.authorization", "req.cookies", "res.headers['set-cookie']"],
+    censor: "[REDACTED]",
+  },
+  formatters: {
+    level: (label) => ({ level: label }),
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
+});
+
+const httpLogger = pinoHttp({
+  logger,
+  genReqId: () => randomUUID(),
+  customLogLevel: (res, err) => {
+    if (res.statusCode >= 500) return "error";
+    if (res.statusCode >= 400) return "warn";
+    return "info";
+  },
+});
+
+// Liveness probe (Kubernetes/Docker) – needs to be first to avoid CSP/other middleware blocking
+app.get("/health/live", (req: Request, res: Response) => {
+  res.status(200).json({ status: "alive", timestamp: new Date().toISOString() });
+});
+
+// Readiness probe
+app.get("/health/ready", async (req: Request, res: Response) => {
+  const checks = {
+    database: false,
+  };
+
+  try {
+    // Test database connection
+    if (pool) {
+      await pool.query("SELECT 1");
+      checks.database = true;
+    }
+  } catch (err) {
+    logger.error({ err }, "Database health check failed");
+  }
+
+  const isReady = checks.database;
+  res.status(isReady ? 200 : 503).json({
+    status: isReady ? "ready" : "unavailable",
+    checks,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Seed database in development only when a database is configured
 if (app.get("env") === "development" && process.env.DATABASE_URL) {
   // Dynamically import to avoid loading DB code when no DATABASE_URL
-  import("./seed").then(m => m.seedDatabase().catch(console.error));
+  import("./seed").then(m => m.seedDatabase().catch(logger.error));
 }
 
 app.use((req, res, next) => {
@@ -28,7 +86,10 @@ app.use((req, res, next) => {
 });
 app.use(express.urlencoded({ extended: false }));
 
-app.use(helmet());
+// Helmet (CSP is lenient for dev, adjust in prod)
+app.use(helmet({
+  contentSecurityPolicy: app.get("env") === "development" ? false : undefined,
+}));
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -54,87 +115,117 @@ if (app.get("env") === "development") {
   });
 }
 
-// Session configuration
+// Session configuration (use Postgres by default for compatibility)
+let sessionStore: any = undefined;
+if (pool) {
+  sessionStore = new PostgresStore({ pool, tableName: "sessions", createTableIfMissing: true });
+  logger.info("Using Postgres session store (default)");
+}
+
 app.use(
   session({
+    store: sessionStore,
     secret: process.env.SESSION_SECRET || "nursing-education-app-dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // HTTPS in production
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000,
+      sameSite: "lax",
     },
   })
 );
 
-// Simple request logger for /api endpoints (keeps body capture lightly)
+// Structured request logging
+app.use(httpLogger);
+
+// Simple request logger for /api endpoints
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api/v1")) {
-      const logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      console.log(logLine);
+      logger.info({
+        method: req.method,
+        path,
+        statusCode: res.statusCode,
+        durationMs: duration,
+        traceId: (req as any).id,
+      });
+
+      if (process.env.DATABASE_URL) {
+        db.insert(performanceMetrics).values({
+          path,
+          method: req.method,
+          statusCode: res.statusCode,
+          durationMs: duration,
+          ipAddress: req.ip || req.headers["x-forwarded-for"] || null,
+          userAgent: req.headers["user-agent"] || null,
+          userId: (req.session as any)?.userId || null,
+        }).catch((err: any) => logger.warn({ err }, "Failed to record performance metric"));
+      }
     }
   });
 
   next();
 });
 
-// create an HTTP server now — this ensures we always have a server instance
-// to attach WebSocket/vite middleware to even if registerRoutes doesn't return one.
 const server = http.createServer(app);
+
+// Graceful shutdown handler
+const gracefulShutdown = async (signal: string) => {
+  logger.info({ signal }, "Received shutdown signal, starting graceful shutdown");
+
+  server.close(() => {
+    logger.info("HTTP server closed");
+  });
+
+  if (pool) {
+    await pool.end().catch(logger.error);
+    logger.info("Database pool closed");
+  }
+
+  process.exit(0);
+};
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 (async () => {
   try {
     registerSeoRoutes(app);
-    // registerRoutes may set up API routes and middleware.
-    // If your registerRoutes function returns a server instance, that's OK,
-    // but we won't rely on it. We already created `server` above.
     await registerRoutes(app);
 
-    // central error handler:
-    // - respond with JSON error message for API calls
-    // - log the error but do NOT re-throw it (re-throw can crash the process)
+    if (process.env.DATABASE_URL) {
+      optimizeDatabase().catch(err => logger.warn({ err }, "Database optimization failed"));
+    }
+
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err?.status || err?.statusCode || 500;
       const message = err?.message || "Internal Server Error";
+      const traceId = (_req as any).id;
 
-      // log error server-side for debugging
-      try {
-        console.error(`ERROR ${status}: ${message}`);
-        if (err?.stack) {
-          // don't print huge stacks in production
-          if (process.env.NODE_ENV !== "production") {
-            console.error(err.stack);
-          }
-        }
-      } catch {
-        /* no-op */
-      }
+      logger.error({ err, status, traceId }, `Request failed: ${message}`);
 
-      // send minimal error information to the client
       if (!res.headersSent) {
-        res.status(status).json({ message });
+        res.status(status).json({ 
+          message,
+          traceId: process.env.NODE_ENV === "development" ? traceId : undefined,
+        });
       }
-      // don't throw here — throwing inside error middleware will typically crash the server
     });
 
-    // In development, the client runs via its own Vite dev server (separate process).
-    // In production, serve built static files if available.
     if (app.get("env") !== "development") {
       try {
         const viteModule: any = await import("./vite");
         viteModule.serveStatic(app);
       } catch (e) {
-        console.warn("Static file serving is unavailable:", e instanceof Error ? e.message : e);
+        logger.warn({ err: e }, "Static file serving is unavailable");
       }
     }
 
-    // bind to port
     const port = parseInt(process.env.PORT || "5000", 10);
     server.listen(
       {
@@ -143,12 +234,11 @@ const server = http.createServer(app);
         reusePort: true,
       },
       () => {
-        console.log(`✅ Server running at http://localhost:${port}`);
+        logger.info({ port }, "Server running");
       }
     );
   } catch (err) {
-    // startup error — log and exit with non-zero code
-    console.error("Failed to start server:", err);
+    logger.fatal({ err }, "Failed to start server");
     process.exit(1);
   }
 })();

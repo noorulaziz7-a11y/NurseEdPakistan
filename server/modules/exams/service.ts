@@ -481,6 +481,91 @@ export async function getAttemptResume(attemptId: string) {
   };
 }
 
+/* ---------------- ADAPTIVE LEARNING ---------------- */
+
+export async function getAdaptiveNextQuestion(params: {
+  userId: string;
+  examId: number;
+  currentDifficultyId: number;
+  excludeMcqIds: string[];
+}) {
+  // 1. Determine target difficulty based on performance
+  // If last 3 answers were correct, increase difficulty. If last 2 were wrong, decrease.
+  const recentLogs = await db
+    .select({ isCorrect: attemptAnswers.isCorrect })
+    .from(attemptAnswers)
+    .innerJoin(examAttempts, eq(attemptAnswers.attemptId, examAttempts.id))
+    .where(
+      and(
+        eq(examAttempts.userId, params.userId),
+        eq(examAttempts.examId, params.examId)
+      )
+    )
+    .orderBy(sql`${attemptAnswers.answeredAt} DESC`)
+    .limit(5);
+
+  let targetDifficultyId = params.currentDifficultyId;
+  const correctCount = recentLogs.filter((l: any) => l.isCorrect).length;
+
+  if (correctCount >= 3 && targetDifficultyId < 3) {
+    targetDifficultyId += 1; // Level up
+  } else if (correctCount <= 1 && targetDifficultyId > 1) {
+    targetDifficultyId -= 1; // Level down
+  }
+
+  // 2. Fetch available questions for the target difficulty
+  const availableQuestions = await db
+    .select({ id: mcqs.id })
+    .from(mcqs)
+    .where(
+      and(
+        eq(mcqs.examId, params.examId),
+        eq(mcqs.difficultyId, targetDifficultyId),
+        params.excludeMcqIds.length > 0 
+          ? sql`${mcqs.id} NOT IN (${sql.join(params.excludeMcqIds, sql`, `)})`
+          : sql`TRUE`
+      )
+    )
+    .limit(20);
+
+  if (availableQuestions.length === 0) {
+    // Fallback to any difficulty if target is empty
+    const fallback = await db
+      .select({ id: mcqs.id })
+      .from(mcqs)
+      .where(
+        and(
+          eq(mcqs.examId, params.examId),
+          params.excludeMcqIds.length > 0 
+            ? sql`${mcqs.id} NOT IN (${sql.join(params.excludeMcqIds, sql`, `)})`
+            : sql`TRUE`
+        )
+      )
+      .limit(1);
+    
+    return fallback[0] || null;
+  }
+
+  // 3. Pick a random one from the available pool
+  const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+  return availableQuestions[randomIndex];
+}
+
+export async function optimizeDatabase() {
+  // Composite index for MCQ filtering (exam, difficulty, system)
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_mcqs_exam_difficulty ON mcqs (exam_id, difficulty_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_mcqs_exam_system ON mcqs (exam_id, system)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_mcqs_exam_subject ON mcqs (exam_id, subject_id)`);
+
+  // Indexes for attempt answers and results
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_attempt_answers_user_exam ON attempt_answers (attempt_id, mcq_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_exam_attempts_user_exam ON exam_attempts (user_id, exam_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_exam_results_user ON exam_results (user_id, exam_id)`);
+
+  // Indexes for admin and performance metrics
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_performance_metrics_path_created ON performance_metrics (path, created_at DESC)`);
+}
+
 type DifficultyWeights = Record<string, number>;
 
 type CreateAttemptInput = {

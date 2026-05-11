@@ -30,6 +30,7 @@ import {
   createAttemptFromQuestionsHandler,
   saveAttemptProgressHandler,
   resumeAttemptStateHandler,
+  getAdaptiveNextQuestionHandler,
 } from "./controller";
 
 const router = Router();
@@ -64,5 +65,6 @@ router.get("/exam-attempts/:id/summary", resultSummaryHandler);
 router.post("/attempts", createAttemptFromQuestionsHandler);
 router.get("/attempts/:id", resumeAttemptStateHandler);
 router.patch("/attempts/:id/progress", saveAttemptProgressHandler);
+router.post("/exams/adaptive/next", getAdaptiveNextQuestionHandler);
 
 export default router;
